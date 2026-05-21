@@ -1,0 +1,623 @@
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { examTypeLabels } from "@/data/constants";
+import { Demand } from "@/types";
+import { useAuth } from "@/hooks/useAuth";
+import { useCompanyDemands } from "@/hooks/useCompanyDemands";
+import { getExamContent } from "@/data/examContentStore";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Archive,
+  FileText,
+  Search,
+  Filter,
+  X,
+  ArrowDown,
+  ArrowUp,
+  LayoutGrid,
+  List,
+  Printer,
+  Download,
+  Eye,
+  ClipboardList,
+  Calendar,
+  User,
+  BookOpen,
+  FolderOpen,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { DemandStatus } from "@/types";
+import { toast } from "sonner";
+import { FolderManager, ExamFolder } from "@/components/approvals/FolderManager";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { showInvokeError, showInvokeSuccess } from "@/lib/invokeFunction";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { deriveSimuladoWorkflowStatus } from "@/lib/simuladoWorkflow";
+
+// Unified item type for both demands and simulados
+interface ApprovalItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  teacherName: string;
+  classGroups: string;
+  status: DemandStatus;
+  createdAt: string;
+  type: "demand" | "simulado";
+  demandRef?: Demand;
+  simuladoId?: string;
+}
+
+const approvalColumns: { status: DemandStatus; label: string; icon: React.ElementType; color: string; bgColor: string }[] = [
+  { status: "approved", label: "Aprovadas", icon: Archive, color: "text-emerald-600", bgColor: "border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20" },
+];
+
+const ITEMS_PER_PAGE = 10;
+
+export default function ApprovalsPage() {
+  const navigate = useNavigate();
+  const { profile, role, user } = useAuth();
+  const { companyDemands } = useCompanyDemands();
+  const [search, setSearch] = useState("");
+  const [filterSubject, setFilterSubject] = useState("all");
+  const [filterTeacher, setFilterTeacher] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [folders, setFolders] = useState<ExamFolder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [approvedSimulados, setApprovedSimulados] = useState<ApprovalItem[]>([]);
+  const [dbSubjects, setDbSubjects] = useState<{ id: string; name: string }[]>([]);
+
+  // Fetch subjects from DB
+  useEffect(() => {
+    supabase.from("subjects").select("id, name").order("name").then(({ data }) => {
+      if (data) setDbSubjects(data);
+    });
+  }, []);
+
+  // Fetch simulados where ALL subjects are approved
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchApprovedSimulados = async () => {
+      const { data: sims } = await supabase
+        .from("simulados")
+        .select("*, simulado_subjects(*)")
+        .order("created_at", { ascending: false });
+
+      if (!sims) return;
+
+      const items: ApprovalItem[] = sims
+        .filter((sim: any) => {
+          const subjects = sim.simulado_subjects || [];
+          const workflowStatus = deriveSimuladoWorkflowStatus(subjects);
+          return workflowStatus === "approved";
+        })
+        .map((sim: any) => ({
+          id: `sim-${sim.id}`,
+          simuladoId: sim.id,
+          title: sim.title,
+          subtitle: `Simulado · ${(sim.simulado_subjects || []).length} disciplina(s) aprovadas`,
+          teacherName: "Multidisciplinar",
+          classGroups: (sim.class_groups || []).join(", "),
+          status: "final" as DemandStatus,
+          createdAt: sim.created_at,
+          type: "simulado" as const,
+        }));
+
+      setApprovedSimulados(items);
+    };
+
+    fetchApprovedSimulados();
+
+    const channel = supabase
+      .channel("simulados-approvals-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "simulados" }, fetchApprovedSimulados)
+      .on("postgres_changes", { event: "*", schema: "public", table: "simulado_subjects" }, fetchApprovedSimulados)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  // Convert demands to unified items
+  const demandItems = useMemo<ApprovalItem[]>(() => {
+    return companyDemands
+      .filter((d) => ["approved", "final"].includes(d.status))
+      .map((d) => ({
+        id: d.id,
+        title: `${d.subjectName} — ${examTypeLabels[d.examType]}`,
+        subtitle: examTypeLabels[d.examType],
+        teacherName: d.teacherName,
+        classGroups: d.classGroups.join(", "),
+        status: d.status,
+        createdAt: d.createdAt,
+        type: "demand" as const,
+        demandRef: d,
+      }));
+  }, [companyDemands]);
+
+  // Merge both sources
+  const allItems = useMemo(() => {
+    return [...demandItems, ...approvedSimulados];
+  }, [demandItems, approvedSimulados]);
+
+  const teachers = useMemo(() => {
+    const map = new Map<string, string>();
+    allItems.forEach((d) => map.set(d.teacherName, d.teacherName));
+    return Array.from(map, ([id, name]) => ({ id, name }));
+  }, [allItems]);
+
+  const examsInFolders = useMemo(() => {
+    const set = new Set<string>();
+    folders.forEach((f) => f.examIds.forEach((id) => set.add(id)));
+    return set;
+  }, [folders]);
+
+  const filtered = useMemo(() => {
+    let result = allItems;
+
+    if (activeFolderId) {
+      const folder = folders.find((f) => f.id === activeFolderId);
+      if (folder) result = result.filter((d) => folder.examIds.includes(d.id));
+    } else {
+      result = result.filter((d) => !examsInFolders.has(d.id));
+    }
+
+    if (filterSubject !== "all") result = result.filter((d) => d.title.toLowerCase().includes(filterSubject.toLowerCase()));
+    if (filterTeacher !== "all") result = result.filter((d) => d.teacherName === filterTeacher);
+
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(
+        (d) =>
+          d.title.toLowerCase().includes(s) ||
+          d.teacherName.toLowerCase().includes(s) ||
+          d.classGroups.toLowerCase().includes(s)
+      );
+    }
+
+    result.sort((a, b) => {
+      const da = new Date(a.createdAt).getTime();
+      const db = new Date(b.createdAt).getTime();
+      return sortOrder === "newest" ? db - da : da - db;
+    });
+
+    return result;
+  }, [search, filterSubject, filterTeacher, sortOrder, activeFolderId, folders, examsInFolders, allItems]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const paginatedList = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const hasActiveFilters = filterSubject !== "all" || filterTeacher !== "all" || search !== "";
+
+  const clearFilters = () => {
+    setFilterSubject("all");
+    setFilterTeacher("all");
+    setSearch("");
+    setCurrentPage(1);
+  };
+
+  const buildPrintHTML = (demandId: string) => {
+    const demand = companyDemands.find((d) => d.id === demandId);
+    const examHTML = getExamContent(demandId);
+    return `
+      <html>
+        <head>
+          <title>Prova - ${demand?.subjectName || "Impressão"}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+            h1, h2, h3 { margin-top: 1em; }
+            hr { margin: 16px 0; border: none; border-top: 1px solid #ccc; }
+            ul, ol { padding-left: 24px; }
+            table { border-collapse: collapse; width: 100%; }
+            td, th { border: 1px solid #ccc; padding: 6px 10px; }
+            img { max-width: 100%; }
+            @media print { body { padding: 20px; } }
+          </style>
+        </head>
+        <body>${examHTML}</body>
+      </html>
+    `;
+  };
+
+  const handlePrint = (id: string) => {
+    toast.info("Abrindo impressão...");
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(buildPrintHTML(id));
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const handleGeneratePDF = (id: string) => {
+    const pdfWindow = window.open("", "_blank");
+    if (pdfWindow) {
+      pdfWindow.document.write(buildPrintHTML(id));
+      pdfWindow.document.close();
+    }
+    showInvokeSuccess("PDF pronto. Use 'Salvar como PDF' no diálogo de impressão.");
+  };
+
+  const handleView = (item: ApprovalItem) => {
+    if (item.type === "simulado") {
+      navigate(item.simuladoId ? `/simulados` : `/simulados`);
+    } else {
+      navigate(`/provas/editor/${item.id}`);
+    }
+  };
+
+  // Stats
+  const approvedCount = filtered.filter((d) => d.status === "approved").length;
+  const finalCount = filtered.filter((d) => d.status === "final").length;
+
+  return (
+    <div className="flex flex-col animate-fade-in h-full space-y-8 pb-12">
+      <PageHeader
+        title="Arquivadas"
+        badge="Gestão Acadêmica"
+        icon={Archive}
+        description="Provas e simulados aprovados ou finalizados, organizados para consulta e aplicação com uma leitura mais ampla do acervo."
+        className="shadow-xl shadow-primary/10"
+        actions={
+          <div className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md text-sm">
+            <span className="font-bold text-white">{filtered.length}</span>
+            <span className="text-white/70 text-xs">Total</span>
+          </div>
+        }
+      />
+
+      <div className="surface-elevated rounded-[2rem] p-5 md:p-6 shadow-md space-y-5">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Acervo finalizado</p>
+          <h2 className="text-2xl md:text-[2rem] font-black tracking-tight text-foreground mt-2">Visualize materiais aprovados com mais contexto e espaço</h2>
+          <p className="text-sm text-muted-foreground mt-2 max-w-3xl leading-relaxed">
+            Esta área concentra arquivos já prontos para aplicação, com uma visão mais limpa para filtros, visualização e organização em pastas.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {/* Stats pills */}
+          <div className="hidden md:flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm shadow-sm">
+              <span className="font-bold text-foreground">{filtered.length}</span>
+              <span className="text-muted-foreground font-medium">Total</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-sm border border-emerald-500/10">
+              <span className="font-bold text-emerald-600">{approvedCount}</span>
+              <span className="text-emerald-600/70 font-medium">Aprovadas</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2 self-end">
+          <span className="text-xs font-bold text-muted-foreground uppercase mr-2">Visualização</span>
+          <div className="flex p-1 bg-secondary/50 rounded-xl shadow-inner">
+            <button
+              onClick={() => { setViewMode("kanban"); setCurrentPage(1); }}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                viewMode === "kanban"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => { setViewMode("list"); setCurrentPage(1); }}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                viewMode === "list"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar - Standardized with other pages */}
+      <div className="surface-elevated p-5 space-y-5 border-none shadow-md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3 flex-1">
+            {/* Search */}
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar disciplina, professor, turma..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                className="pl-10 h-11 bg-secondary/50 border-none focus-visible:ring-primary/20 rounded-xl font-medium"
+              />
+            </div>
+
+            <Select value={filterSubject} onValueChange={(v) => { setFilterSubject(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full md:w-[170px] h-11 bg-secondary/50 border-none rounded-xl font-medium">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Disciplina" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-none shadow-xl">
+                <SelectItem value="all">Todas disciplinas</SelectItem>
+                {dbSubjects.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterTeacher} onValueChange={(v) => { setFilterTeacher(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full md:w-[170px] h-11 bg-secondary/50 border-none rounded-xl font-medium">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Professor" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-none shadow-xl">
+                <SelectItem value="all">Todos professores</SelectItem>
+                {teachers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={() => setSortOrder(p => p === "newest" ? "oldest" : "newest")} 
+                className="gap-2 h-11 px-4 bg-secondary/50 border-none rounded-xl font-medium"
+              >
+                {sortOrder === "newest" ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+                {sortOrder === "newest" ? "Recentes" : "Antigas"}
+              </Button>
+
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-11 px-4 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/5 rounded-xl font-bold uppercase tracking-wider">
+                  <X className="h-3 w-3" /> Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div>
+
+      {/* Folders */}
+      <FolderManager
+        folders={folders}
+        setFolders={setFolders}
+        activeFolderId={activeFolderId}
+        setActiveFolderId={setActiveFolderId}
+      />
+
+      {/* Content */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {viewMode === "kanban" ? (
+          <div className="flex-1">
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 opacity-40">
+                <Archive className="h-10 w-10 mb-3" />
+                <p className="text-sm text-muted-foreground">Nenhuma prova encontrada</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filtered.map((item) => (
+                  <ApprovalCard
+                    key={item.id}
+                    item={item}
+                    onPrint={() => item.type === "demand" ? handlePrint(item.id) : toast.info("Impressão de simulado disponível na página de Simulados.")}
+                    onPDF={() => item.type === "demand" ? handleGeneratePDF(item.id) : toast.info("PDF de simulado disponível na página de Simulados.")}
+                    onView={() => handleView(item)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col">
+            <div className="space-y-2 flex-1">
+              {paginatedList.map((item) => (
+                <Card
+                  key={item.id}
+                  draggable
+                  onDragStart={(e) => { e.dataTransfer.setData("text/plain", item.id); e.dataTransfer.effectAllowed = "move"; }}
+                  className="shadow-sm hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing animate-fade-in"
+                >
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("p-2.5 rounded-xl", item.type === "simulado" ? "bg-primary/10" : "bg-emerald-500/10")}>
+                        {item.type === "simulado" ? (
+                          <ClipboardList className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Archive className="h-4 w-4 text-emerald-600" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
+                          {item.type === "simulado" && (
+                            <Badge variant="outline" className="text-[10px]">Simulado</Badge>
+                          )}
+                          <StatusBadge status={item.status} />
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {item.teacherName}
+                          </span>
+                          <span>•</span>
+                          <span>{item.classGroups}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(item.createdAt).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleView(item)}>
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Visualizar</TooltipContent>
+                      </Tooltip>
+                      {item.type === "demand" && (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handlePrint(item.id)}>
+                                <Printer className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Imprimir</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="icon" className="h-8 w-8" onClick={() => handleGeneratePDF(item.id)}>
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Gerar PDF</TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4 mt-4 border-t border-border">
+                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className="text-xs">
+                  Anterior
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant={page === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-8 w-8 text-xs p-0"
+                  >
+                    {page}
+                  </Button>
+                ))}
+                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)} className="text-xs">
+                  Próxima
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-16">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-muted flex items-center justify-center mb-4">
+            <Archive className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="font-semibold text-foreground">Nenhuma prova arquivada encontrada</p>
+          <p className="text-sm text-muted-foreground mt-1">Quando provas forem aprovadas ou finalizadas, elas aparecerão aqui.</p>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={clearFilters} className="mt-4 gap-1.5">
+              <X className="h-3 w-3" />
+              Limpar filtros
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApprovalCard({
+  item,
+  onPrint,
+  onPDF,
+  onView,
+}: {
+  item: ApprovalItem;
+  onPrint: () => void;
+  onPDF: () => void;
+  onView: () => void;
+}) {
+  return (
+    <Card
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData("text/plain", item.id); e.dataTransfer.effectAllowed = "move"; }}
+      className="shadow-sm hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing group"
+    >
+      <CardContent className="p-3.5 space-y-2.5">
+        <div className="flex items-start gap-2.5">
+          <div className={cn("p-2 rounded-lg mt-0.5", item.type === "simulado" ? "bg-primary/10" : "bg-emerald-500/10")}>
+            {item.type === "simulado" ? (
+              <ClipboardList className="h-4 w-4 text-primary" />
+            ) : (
+              <Archive className="h-4 w-4 text-emerald-600" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h4 className="text-sm font-semibold text-foreground truncate">{item.title}</h4>
+              {item.type === "simulado" && (
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0">Simulado</Badge>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{item.subtitle}</p>
+          </div>
+          <StatusBadge status={item.status} />
+        </div>
+
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground pl-10">
+          <span className="flex items-center gap-1">
+            <User className="h-3 w-3" />
+            {item.teacherName}
+          </span>
+          <span>{item.classGroups}</span>
+          <span className="flex items-center gap-1 ml-auto">
+            <Calendar className="h-3 w-3" />
+            {new Date(item.createdAt).toLocaleDateString("pt-BR")}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 pt-2 border-t border-border">
+          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[11px] gap-1.5 flex-1 hover:bg-primary/5" onClick={onView}>
+            <Eye className="h-3 w-3" />
+            Ver
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[11px] gap-1.5 flex-1 hover:bg-primary/5" onClick={onPrint}>
+            <Printer className="h-3 w-3" />
+            Imprimir
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[11px] gap-1.5 flex-1 hover:bg-primary/5" onClick={onPDF}>
+            <Download className="h-3 w-3" />
+            PDF
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

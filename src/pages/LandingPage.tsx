@@ -1,0 +1,483 @@
+import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
+import {
+  GraduationCap, CheckCircle2, Zap, Shield, BarChart3,
+  ArrowRight, Star, Users, FileText, Brain, Quote, Menu, X,
+  Sparkles, ChevronRight, Moon, Sun, Target, TrendingUp,
+  Building2, Clock, Award, PlayCircle,
+} from "lucide-react";
+
+const features = [
+  { icon: BarChart3, title: "Painel de Desempenho", desc: "Acompanhe a evolução dos alunos de forma clara, identificando rapidamente quem precisa de mais apoio pedagógico.", color: "from-rose-500/20 to-pink-500/20" },
+  { icon: Brain, title: "Diagnóstico Pedagógico Personalizado", desc: "Entenda os pontos fortes e áreas de melhoria de cada aluno com relatórios detalhados, facilitando a intervenção.", color: "from-violet-500/20 to-purple-500/20" },
+  { icon: FileText, title: "Criação Descomplicada de Provas", desc: "Um editor completo e intuitivo para montar provas com rapidez. Fórmulas, imagens e formatação pronta em poucos cliques.", color: "from-blue-500/20 to-indigo-500/20" },
+  { icon: Users, title: "Gestão de Notas e Frequência", desc: "Registre notas e controle a frequência sem burocracia. Tudo integrado para facilitar o dia a dia do professor.", color: "from-emerald-500/20 to-teal-500/20" },
+  { icon: Zap, title: "Simulados e Correção Ágil", desc: "Crie simulados, gere folhas de resposta e ganhe horas preciosas com a nossa correção automática.", color: "from-cyan-500/20 to-sky-500/20" },
+  { icon: Shield, title: "Trabalho em Equipe", desc: "Aproxime coordenadores e professores em um fluxo integrado de revisão, comentários e aprovação de materiais.", color: "from-amber-500/20 to-orange-500/20" },
+  { icon: Sparkles, title: "Assistente de Questões", desc: "Sabe aquele bloqueio criativo? Nosso assistente ajuda a sugerir questões alinhadas ao nível exato da sua turma.", color: "from-fuchsia-500/20 to-purple-500/20" },
+  { icon: GraduationCap, title: "Central de Ajuda e Apoio", desc: "Conte com guias simples e um suporte dedicado para garantir que nenhum professor fique com dúvidas na plataforma.", color: "from-teal-500/20 to-green-500/20" },
+  { icon: Target, title: "Relatórios Claros", desc: "Chega de planilhas confusas. Exporte boletins e relatórios de acompanhamento com um design profissional e acessível.", color: "from-orange-500/20 to-red-500/20" },
+];
+
+const testimonials = [
+  { name: "Ana Beatriz", role: "Coordenadora Pedagógica", school: "Colégio São Paulo", text: "O painel de desempenho mudou nossa forma de acompanhar os alunos. Temos mais clareza para ajudar quem precisa. Incrível!", rating: 5, avatar: "AB" },
+  { name: "Prof. Ricardo Lima", role: "Professor de Matemática", school: "Escola Moderna", text: "Ganhei horas do meu final de semana! A correção ágil e a criação simples de provas facilitaram muito a minha rotina.", rating: 5, avatar: "RL" },
+  { name: "Dra. Carla Mendonça", role: "Diretora", school: "Instituto Educar", text: "Os professores estão menos sobrecarregados e conseguem focar mais no ensino. A plataforma é acolhedora e fácil de usar.", rating: 5, avatar: "CM" },
+];
+
+const plans = [
+  { name: "Básico", price: "R$ 199", period: "/mês", features: ["Até 10 usuários", "Provas ilimitadas", "Banco de questões", "Notas e frequência", "Suporte por WhatsApp"], highlight: false, cta: "Escolher plano" },
+  { name: "Profissional", price: "R$ 299", period: "/mês", features: ["Até 20 usuários", "Provas ilimitadas", "Assistente de questões", "Painel de desempenho", "Relatórios avançados", "Suporte prioritário"], highlight: false, cta: "Escolher plano" },
+  { name: "Premium", price: "R$ 499", period: "/mês", features: ["Até 40 usuários", "Provas ilimitadas", "Diagnóstico pedagógico", "Painel de desempenho completo", "Simulados e correção ágil", "Treinamento para equipe", "Suporte dedicado"], highlight: true, cta: "Começar agora" },
+  { name: "Professor Individual", price: "Sob consulta", period: "", features: ["Plano acessível", "Tudo que o professor precisa", "Provas ilimitadas", "Assistente de questões", "Relatórios de turma", "Correção facilitada", "Suporte amigável"], highlight: false, cta: "Fale pelo WhatsApp" },
+];
+
+const stats = [
+  { value: "200+", label: "Escolas ativas", icon: Building2 },
+  { value: "15k+", label: "Provas criadas", icon: FileText },
+  { value: "98%", label: "Satisfação", icon: Award },
+  { value: "50%", label: "Menos tempo", icon: Clock },
+];
+
+/* ── Intersection Observer hook ── */
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const targets = el.querySelectorAll<HTMLElement>("[data-reveal]");
+    targets.forEach((t) => {
+      t.style.opacity = "0";
+      t.style.transform = "translateY(24px)";
+      t.style.transition = "opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1)";
+    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const target = entry.target as HTMLElement;
+            const delay = Number(target.dataset.revealDelay || 0);
+            setTimeout(() => {
+              target.style.opacity = "1";
+              target.style.transform = "translateY(0)";
+            }, delay);
+            observer.unobserve(target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -30px 0px" }
+    );
+    targets.forEach((t) => observer.observe(t));
+    return () => observer.disconnect();
+  }, []);
+  return ref;
+}
+
+export default function LandingPage() {
+  const containerRef = useScrollReveal();
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      {/* ── Header ── */}
+      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/90 backdrop-blur-xl border-b border-border/50 shadow-sm" : "bg-transparent"}`}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
+          <Link to="/landing" className="flex items-center gap-2.5 group">
+            <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow overflow-hidden">
+              <img src="/logo.png" alt="SmartTest" className="h-7 w-7 object-contain" />
+            </div>
+            <span className="text-lg font-bold tracking-tight font-display">SmartTest</span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+            {[
+              { href: "#funcionalidades", label: "Funcionalidades" },
+              { href: "#depoimentos", label: "Depoimentos" },
+              { href: "#planos", label: "Planos" },
+            ].map((link) => (
+              <a key={link.href} href={link.href} className="relative py-1 hover:text-foreground transition-colors after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:scale-x-0 after:origin-left after:transition-transform hover:after:scale-x-100">
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
+          <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              className="p-2 rounded-xl border border-border/50 bg-card/80 hover:bg-muted transition-colors"
+              aria-label="Alternar tema"
+            >
+              {isDark ? <Sun className="h-4 w-4 text-foreground" /> : <Moon className="h-4 w-4 text-foreground" />}
+            </button>
+            <Link to="/login">
+              <Button variant="ghost" size="sm" className="font-medium">Entrar</Button>
+            </Link>
+            <Link to="/cadastro">
+              <Button size="sm" className="shadow-lg shadow-primary/20 font-medium gap-1.5">
+                Começar agora <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* Mobile menu toggle */}
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              className="p-2 rounded-lg hover:bg-muted transition-colors"
+              aria-label="Alternar tema"
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <button className="p-2 rounded-lg hover:bg-muted transition-colors" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-background/95 backdrop-blur-xl border-b border-border/50 animate-fade-in">
+            <div className="px-4 py-4 space-y-3">
+              <a href="#funcionalidades" className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>Funcionalidades</a>
+              <a href="#depoimentos" className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>Depoimentos</a>
+              <a href="#planos" className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>Planos</a>
+              <div className="pt-2 flex gap-3">
+                <Link to="/login" className="flex-1"><Button variant="outline" className="w-full" size="sm">Entrar</Button></Link>
+                <Link to="/cadastro" className="flex-1"><Button className="w-full" size="sm">Criar conta</Button></Link>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* ── Hero ── */}
+      <section className="relative pt-28 pb-20 sm:pt-36 sm:pb-28 px-4 sm:px-6">
+        {/* Background effects (softened for humanized look) */}
+        <div className="absolute inset-0 bg-slate-50 dark:bg-background overflow-hidden -z-10">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.05),transparent_70%)]" />
+          <div className="absolute top-40 -left-20 w-72 h-72 rounded-full bg-primary/5 blur-3xl" />
+          <div className="absolute top-20 -right-20 w-96 h-96 rounded-full bg-accent/5 blur-3xl" />
+        </div>
+
+        <div className="max-w-4xl mx-auto text-center relative">
+          <div
+            className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold text-primary mb-8 animate-fade-in"
+            style={{ animationDelay: "0.1s", animationFillMode: "both" }}
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Foco no que importa: a educação
+            <ChevronRight className="h-3 w-3" />
+          </div>
+
+          <h1
+            className="text-4xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight font-display leading-[1.05] mb-6 animate-fade-in text-slate-800 dark:text-foreground"
+            style={{ animationDelay: "0.2s", animationFillMode: "both" }}
+          >
+            Mais tempo para ensinar,{" "}
+            <br className="hidden sm:block" />
+            menos tempo{" "}
+            <span className="relative inline-block text-primary">
+              corrigindo provas
+              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 8" fill="none">
+                <path d="M1 5.5C40 2 80 2 100 4C120 6 160 3 199 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+              </svg>
+            </span>
+          </h1>
+
+          <p
+            className="text-lg sm:text-xl text-slate-600 dark:text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in"
+            style={{ animationDelay: "0.35s", animationFillMode: "both" }}
+          >
+            A plataforma acolhedora que ajuda escolas e professores a simplificarem o dia a dia pedagógico, 
+            para focarem no que realmente transforma o mundo: o desenvolvimento de cada aluno.
+          </p>
+
+          <div
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in"
+            style={{ animationDelay: "0.5s", animationFillMode: "both" }}
+          >
+            <Link to="/cadastro">
+              <Button size="lg" className="text-base px-8 h-12 shadow-xl shadow-primary/25 gap-2 hover:shadow-primary/35 transition-all hover:-translate-y-0.5">
+                Começar agora <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <a href="#funcionalidades">
+              <Button size="lg" variant="outline" className="text-base px-8 h-12 hover:-translate-y-0.5 transition-all">
+                Ver funcionalidades
+              </Button>
+            </a>
+          </div>
+
+          <div
+            className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-5 animate-fade-in"
+            style={{ animationDelay: "0.65s", animationFillMode: "both" }}
+          >
+            <div className="flex -space-x-2">
+              {["AB", "RL", "CM", "JS", "MP"].map((initials, idx) => (
+                <div
+                  key={initials}
+                  className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 border-2 border-background flex items-center justify-center text-[10px] font-bold text-foreground shadow-sm"
+                  style={{ zIndex: 5 - idx }}
+                >
+                  {initials}
+                </div>
+              ))}
+            </div>
+            <div className="text-left">
+              <div className="flex items-center gap-1">
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <Star key={j} className="h-3.5 w-3.5 fill-accent text-accent" />
+                ))}
+                <span className="ml-1.5 text-xs font-semibold">4.9/5</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">+200 escolas confiam no SmartTest</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Humanized Image */}
+        <div
+          className="max-w-5xl mx-auto mt-20 relative animate-fade-in px-4 sm:px-0"
+          style={{ animationDelay: "0.9s", animationFillMode: "both" }}
+        >
+          <div className="absolute -inset-4 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 rounded-3xl blur-2xl opacity-60" />
+          <div className="relative rounded-3xl border-4 border-white/80 dark:border-card shadow-2xl overflow-hidden aspect-[16/9] md:aspect-[21/9]">
+            <img 
+              src="/teacher_classroom_hero.png" 
+              alt="Professor sorrindo em sala de aula" 
+              className="w-full h-full object-cover object-center transform hover:scale-105 transition-transform duration-700"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stats bar (full-width band) ── */}
+      <section className="px-4 sm:px-6 -mt-8 relative z-10">
+        <div className="max-w-5xl mx-auto rounded-2xl border border-border/50 bg-card/90 backdrop-blur-xl shadow-xl shadow-primary/5 px-6 py-6 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+          {stats.map((s) => (
+            <div key={s.label} className="flex items-center gap-3 justify-center sm:justify-start">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <s.icon className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-extrabold font-display text-foreground leading-none">{s.value}</div>
+                <div className="text-[11px] text-muted-foreground mt-1">{s.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Features ── */}
+      <section id="funcionalidades" className="py-20 sm:py-28 px-4 sm:px-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/40 via-muted/20 to-transparent" />
+        <div className="max-w-6xl mx-auto relative">
+          <div className="text-center mb-16" data-reveal>
+            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary mb-3">Funcionalidades</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display mb-4">Tudo para apoiar o professor</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-lg">Menos tempo com burocracia, mais tempo inspirando e ensinando.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {features.map((f, i) => (
+              <div key={f.title} data-reveal data-reveal-delay={i * 80}>
+                <div className="group relative rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 h-full">
+                  <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                    <f.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2 font-display">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section className="py-20 sm:py-28 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16" data-reveal>
+            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary mb-3">Como funciona</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display mb-4">3 passos para começar</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-lg">Comece a usar o SmartTest em minutos, sem complicação</p>
+          </div>
+          <div className="relative grid md:grid-cols-3 gap-6 md:gap-4">
+            {/* Connecting line */}
+            <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+            {[
+              { n: "01", title: "Crie sua conta", desc: "Cadastre sua escola em 2 minutos e convide sua equipe pedagógica.", icon: Users },
+              { n: "02", title: "Configure suas turmas", desc: "Importe alunos via planilha e organize disciplinas e séries.", icon: GraduationCap },
+              { n: "03", title: "Comece a avaliar", desc: "Crie provas com IA, corrija com leitura óptica e acompanhe o desempenho.", icon: TrendingUp },
+            ].map((step, i) => (
+              <div key={step.n} data-reveal data-reveal-delay={i * 120} className="relative">
+                <div className="relative rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full text-center">
+                  <div className="relative inline-flex mb-4">
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+                      <step.icon className="h-7 w-7 text-primary-foreground" />
+                    </div>
+                    <span className="absolute -top-1 -right-2 text-[10px] font-bold bg-background border border-border px-2 py-0.5 rounded-full text-primary shadow-sm">
+                      {step.n}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-lg mb-2 font-display">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section id="depoimentos" className="py-20 sm:py-28 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16" data-reveal>
+            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary mb-3">Depoimentos</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display mb-4">O que nossos clientes dizem</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-lg">Mais de 200 escolas já transformaram sua gestão de provas</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <div key={t.name} data-reveal data-reveal-delay={i * 100}>
+                <div className="relative rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 hover:border-primary/20 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full">
+                  <Quote className="h-8 w-8 text-primary/10 absolute top-5 right-5" />
+                  <div className="flex gap-0.5 mb-4">
+                    {Array.from({ length: t.rating }).map((_, j) => (
+                      <Star key={j} className="h-4 w-4 fill-accent text-accent" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-6">"{t.text}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                      {t.avatar}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">{t.name}</p>
+                      <p className="text-xs text-muted-foreground">{t.role} · {t.school}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Pricing ── */}
+      <section id="planos" className="py-20 sm:py-28 px-4 sm:px-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/40 via-muted/20 to-transparent" />
+        <div className="max-w-6xl mx-auto relative">
+          <div className="text-center mb-16" data-reveal>
+            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary mb-3">Planos</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display mb-4">Planos para cada escola</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-lg">Escolha o plano ideal e escale conforme sua necessidade</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {plans.map((p, i) => (
+              <div key={p.name} data-reveal data-reveal-delay={i * 100}>
+                <div className={`relative rounded-2xl border bg-card/80 backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-1 h-full flex flex-col ${p.highlight ? "border-primary/40 shadow-xl shadow-primary/10 ring-1 ring-primary/20" : "border-border/50 hover:border-primary/20 hover:shadow-lg"}`}>
+                  {p.highlight && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs font-bold px-4 py-1 rounded-full shadow-lg shadow-primary/20">
+                      Mais popular
+                    </div>
+                  )}
+                  <div className="pt-2">
+                    <h3 className="font-bold text-base mb-1 font-display">{p.name}</h3>
+                    <div className="flex items-baseline gap-1 mb-6">
+                      <span className="text-3xl font-extrabold font-display">{p.price}</span>
+                      <span className="text-sm text-muted-foreground">{p.period}</span>
+                    </div>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {p.features.map((feat) => (
+                      <li key={feat} className="flex items-start gap-2.5 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {p.name === "Professor Individual" ? (
+                    <a href="https://wa.me/5500000000000?text=Olá! Tenho interesse no plano Professor Individual do SmartTest" target="_blank" rel="noopener noreferrer">
+                      <Button className="w-full" variant="outline">{p.cta}</Button>
+                    </a>
+                  ) : (
+                    <Link to="/cadastro">
+                      <Button
+                        className={`w-full transition-all ${p.highlight ? "shadow-lg shadow-primary/20 hover:shadow-primary/30" : ""}`}
+                        variant={p.highlight ? "default" : "outline"}
+                      >
+                        {p.cta}
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA Final ── */}
+      <section className="py-20 sm:py-28 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto" data-reveal>
+          <div className="relative rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-accent/5 p-10 sm:p-16 text-center overflow-hidden">
+            {/* Decorative */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+            <div className="relative">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display mb-5">
+                Pronto para simplificar suas avaliações?
+              </h2>
+              <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
+                Junte-se a centenas de escolas que já economizam tempo e garantem qualidade com o SmartTest.
+              </p>
+              <Link to="/cadastro">
+                <Button size="lg" className="text-base px-10 h-12 shadow-xl shadow-primary/25 gap-2 hover:shadow-primary/35 transition-all hover:-translate-y-0.5">
+                  Começar agora <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-border/40 py-10 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
+              <img src="/logo.png" alt="SmartTest" className="h-5 w-5 object-contain" />
+            </div>
+            <span className="text-sm font-semibold font-display">SmartTest</span>
+          </div>
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} SmartTest. Todos os direitos reservados.</p>
+        </div>
+      </footer>
+
+      {/* ── WhatsApp Float ── */}
+      <a
+        href="https://wa.me/5584996706253?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20o%20SmartTest!"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Fale conosco no WhatsApp"
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-center h-14 w-14 rounded-full bg-[hsl(142,70%,45%)] text-white shadow-lg shadow-[hsl(142,70%,45%)/0.35] hover:scale-110 transition-transform duration-200 animate-fade-in"
+        style={{ animationDelay: "1s", animationFillMode: "both" }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+      </a>
+    </div>
+  );
+}

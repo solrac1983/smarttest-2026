@@ -1,0 +1,747 @@
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { ClipboardList, Plus, Trash2, X, Wand2, Printer, FileDown, Eraser, Copy, Keyboard, AlertTriangle, ArrowRight, Sparkles } from "lucide-react";
+import { generateAnswerKeyHTML, type AnswerKeyEntry } from "@/lib/examQuestionUtils";
+import { showInvokeError, showInvokeSuccess } from "@/lib/invokeFunction";
+
+interface AIAnswer {
+  questionNum: number;
+  answer: string;
+}
+
+export interface SubjectSection {
+  name: string;
+  questionCount: number;
+}
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onInsertAnswerKey: (html: string) => void;
+  examTitle: string;
+  questionCount: number;
+  aiAnswers?: AIAnswer[];
+  subjectSections?: SubjectSection[];
+}
+
+export function AnswerKeyDialog({ open, onOpenChange, onInsertAnswerKey, examTitle, questionCount, aiAnswers, subjectSections }: Props) {
+  const [altCount, setAltCount] = useState("5");
+  const [entries, setEntries] = useState<AnswerKeyEntry[]>([]);
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchStrategy, setBatchStrategy] = useState<"clear" | "fixed" | "suggest" | "ai">("suggest");
+  const [batchLetter, setBatchLetter] = useState("A");
+  const [syncScroll, setSyncScroll] = useState(true);
+  const [activeQuestionNum, setActiveQuestionNum] = useState<number | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
+  const userScrollingPanelRef = useRef(false);
+
+  // Initialize only once per open cycle — prevents wiping user edits when aiAnswers identity changes
+  useEffect(() => {
+    if (!open) {
+      initializedRef.current = false;
+      return;
+    }
+    if (initializedRef.current) return;
+    const sectionTotal = subjectSections?.reduce((sum, s) => sum + s.questionCount, 0) || 0;
+    const count = Math.max(questionCount, sectionTotal, 1);
+    const newEntries = Array.from({ length: count }, (_, i) => {
+      const ai = aiAnswers?.find(a => a.questionNum === i + 1);
+      return { questionNum: i + 1, answer: ai?.answer?.toUpperCase() || "" };
+    });
+    setEntries(newEntries);
+    initializedRef.current = true;
+  }, [open, questionCount, aiAnswers, subjectSections]);
+
+  const letterOptions = useMemo(
+    () => "ABCDEFGHIJ".slice(0, parseInt(altCount, 10) || 5).split(""),
+    [altCount]
+  );
+
+  // When altCount decreases, clamp out-of-range answers
+  useEffect(() => {
+    setEntries(prev =>
+      prev.map(e => (e.answer && !letterOptions.includes(e.answer) ? { ...e, answer: "" } : e))
+    );
+  }, [letterOptions]);
+
+  const filledCount = useMemo(() => entries.filter(e => e.answer.trim()).length, [entries]);
+  const progressPct = entries.length > 0 ? Math.round((filledCount / entries.length) * 100) : 0;
+
+  const autoFillFromAI = useCallback(() => {
+    if (!aiAnswers || aiAnswers.length === 0) return;
+    setEntries(prev =>
+      prev.map((e, i) => {
+        const ai = aiAnswers.find(a => a.questionNum === i + 1);
+        const letter = ai?.answer?.toUpperCase() || e.answer;
+        return { ...e, answer: letterOptions.includes(letter) ? letter : e.answer };
+      })
+    );
+    showInvokeSuccess(`Gabarito preenchido com ${aiAnswers.length} respostas da IA.`);
+  }, [aiAnswers, letterOptions]);
+
+  const setAnswer = useCallback((idx: number, letter: string) => {
+    setEntries(prev =>
+      prev.map((e, i) => (i === idx ? { ...e, answer: e.answer === letter ? "" : letter } : e))
+    );
+  }, []);
+
+  const addQuestion = () => {
+    setEntries(prev => [...prev, { questionNum: prev.length + 1, answer: "" }]);
+  };
+
+  const removeLastQuestion = () => {
+    if (entries.length > 1) setEntries(prev => prev.slice(0, -1));
+  };
+
+  const clearAll = () => {
+    if (filledCount === 0) return;
+    setEntries(prev => prev.map(e => ({ ...e, answer: "" })));
+    showInvokeSuccess("Gabarito limpo.");
+  };
+
+  const validation = useMemo(() => {
+    const missing: number[] = [];
+    const invalid: { q: number; a: string }[] = [];
+    entries.forEach(e => {
+      const a = e.answer.trim().toUpperCase();
+      if (!a) missing.push(e.questionNum);
+      else if (!letterOptions.includes(a)) invalid.push({ q: e.questionNum, a });
+    });
+    return { missing, invalid };
+  }, [entries, letterOptions]);
+
+  // Suggests the closest valid letter for an invalid one (e.g. "F" -> "E", "G" -> "E").
+  const suggestLetter = useCallback((bad: string): string => {
+    const up = bad.trim().toUpperCase();
+    if (!up) return letterOptions[0] ?? "A";
+    const code = up.charCodeAt(0);
+    if (code < 65) return letterOptions[0];
+    const last = letterOptions[letterOptions.length - 1];
+    if (code > last.charCodeAt(0)) return last;
+    // Numeric like "1" -> "A", "2" -> "B"
+    if (/^\d$/.test(up)) {
+      const idx = Math.min(parseInt(up, 10) - 1, letterOptions.length - 1);
+      return letterOptions[Math.max(0, idx)];
+    }
+    return letterOptions[0];
+  }, [letterOptions]);
+
+  const applyBatchFix = useCallback(() => {
+    if (validation.invalid.length === 0) {
+      showInvokeError("Nenhuma resposta inválida para corrigir.");
+      return;
+    }
+    const invalidNums = new Set(validation.invalid.map(i => i.q));
+    let updated = 0;
+    setEntries(prev =>
+      prev.map(e => {
+        if (!invalidNums.has(e.questionNum)) return e;
+        let next = "";
+        if (batchStrategy === "clear") {
+          next = "";
+        } else if (batchStrategy === "fixed") {
+          next = letterOptions.includes(batchLetter) ? batchLetter : letterOptions[0];
+        } else if (batchStrategy === "suggest") {
+          next = suggestLetter(e.answer);
+        } else if (batchStrategy === "ai") {
+          const ai = aiAnswers?.find(a => a.questionNum === e.questionNum);
+          const candidate = ai?.answer?.toUpperCase() || "";
+          next = letterOptions.includes(candidate) ? candidate : suggestLetter(e.answer);
+        }
+        updated++;
+        return { ...e, answer: next };
+      })
+    );
+    setBatchOpen(false);
+    showInvokeSuccess(`${updated} resposta(s) corrigida(s) em lote.`);
+  }, [validation.invalid, batchStrategy, batchLetter, letterOptions, aiAnswers, suggestLetter]);
+
+  const performInsert = () => {
+    const filled = entries
+      .filter(e => e.answer.trim() && letterOptions.includes(e.answer.trim().toUpperCase()))
+      .map(e => ({ ...e, answer: e.answer.trim().toUpperCase() }));
+    const html = generateAnswerKeyHTML(filled, examTitle);
+    onInsertAnswerKey(html);
+    showInvokeSuccess(`Gabarito com ${filled.length} respostas inserido ao final da prova!`);
+    onOpenChange(false);
+  };
+
+  const handleInsert = () => {
+    const filled = entries.filter(e => e.answer.trim());
+    if (filled.length === 0) {
+      showInvokeError("Preencha ao menos uma resposta antes de inserir o gabarito.");
+      return;
+    }
+
+    const { missing, invalid } = validation;
+
+    if (invalid.length > 0) {
+      const sample = invalid.slice(0, 5).map(i => `Q${i.q}=${i.a}`).join(", ");
+      showInvokeError(
+        `${invalid.length} resposta(s) fora das alternativas A–${letterOptions[letterOptions.length - 1]}: ${sample}${invalid.length > 5 ? "…" : ""}. Corrija antes de inserir.`
+      );
+      setFocusedIdx(entries.findIndex(e => e.questionNum === invalid[0].q));
+      return;
+    }
+
+    if (missing.length > 0) {
+      const sample = missing.slice(0, 8).join(", ");
+      const ok = window.confirm(
+        `Atenção: ${missing.length} questão(ões) sem resposta (Q${sample}${missing.length > 8 ? "…" : ""}).\n\nDeseja inserir o gabarito mesmo assim? As questões em branco serão omitidas.`
+      );
+      if (!ok) {
+        setFocusedIdx(entries.findIndex(e => e.questionNum === missing[0]));
+        return;
+      }
+    }
+
+    performInsert();
+  };
+
+  const handleCopy = async () => {
+    const filled = entries.filter(e => e.answer.trim());
+    if (filled.length === 0) {
+      showInvokeError("Nada para copiar.");
+      return;
+    }
+    const text = filled.map(e => `${e.questionNum}-${e.answer}`).join(", ");
+    try {
+      await navigator.clipboard.writeText(text);
+      showInvokeSuccess("Gabarito copiado!");
+    } catch {
+      showInvokeError("Não foi possível copiar.");
+    }
+  };
+
+  const buildPrintHTML = () => {
+    const filled = entries.filter(e => e.answer.trim());
+    if (filled.length === 0) {
+      showInvokeError("Preencha ao menos uma resposta.");
+      return null;
+    }
+
+    const questionsPerPage = 50;
+    const numPages = Math.ceil(filled.length / questionsPerPage);
+
+    let pagesHTML = "";
+    
+    for (let page = 0; page < numPages; page++) {
+      const startIdx = page * questionsPerPage;
+      const endIdx = Math.min(startIdx + questionsPerPage, filled.length);
+      const pageEntries = filled.slice(startIdx, endIdx);
+      
+      const rows = pageEntries
+        .map((e) => {
+          const qNum = String(e.questionNum).padStart(2, "0");
+          const answer = e.answer.toUpperCase();
+          const getLetterBgColor = (letter: string) => {
+            switch (letter) {
+              case "A": return "#ef4444";
+              case "B": return "#3b82f6";
+              case "C": return "#10b981";
+              case "D": return "#f59e0b";
+              case "E": return "#8b5cf6";
+              default: return "#3182ce";
+            }
+          };
+          const bg = getLetterBgColor(answer);
+          return `<tr><td style="text-align:center;padding:6px 12px;border:1px solid #e2e8f0;font-size:13px;font-weight:600;color:#1a202c;width:60px;">${qNum}</td><td style="text-align:center;padding:6px 12px;border:1px solid #e2e8f0;"><span style="display:inline-block;width:28px;height:28px;line-height:28px;border-radius:50%;background:${bg};color:#fff;font-weight:bold;font-size:14px;">${answer}</span></td></tr>`;
+        })
+        .join("");
+
+      const breakBefore = page > 0 ? 'style="break-before:page;page-break-before:always;"' : '';
+      
+      pagesHTML += `
+        <div ${breakBefore} style="padding:30px;font-family:'Segoe UI',Arial,sans-serif;">
+          <div style="text-align:center;margin-bottom:30px;">
+            <h1 style="margin:0;font-size:28px;font-weight:700;color:#1a202c;letter-spacing:2px;text-transform:uppercase;">Gabarito</h1>
+            <p style="margin:8px 0 0;font-size:16px;color:#4a5568;font-weight:500;">${examTitle}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#718096;">Página ${page + 1} de ${numPages}</p>
+          </div>
+          <table style="width:100%;border-collapse:collapse;margin:0 auto;box-shadow:0 1px 3px rgba(0,0,0,0.1);border-radius:8px;overflow:hidden;">
+            <thead>
+              <tr style="background:linear-gradient(135deg,#3182ce,#2b6cb0);">
+                <th style="text-align:center;padding:12px;border:none;font-size:13px;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:1px;">Questão</th>
+                <th style="text-align:center;padding:12px;border:none;font-size:13px;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:1px;">Resposta</th>
+              </tr>
+            </thead>
+            <tbody style="background:#fff;">
+              ${rows}
+            </tbody>
+          </table>
+          <div style="text-align:center;margin-top:20px;font-size:11px;color:#a0aec0;">
+            Respuestas: A ( ) | B ( ) | C ( ) | D ( ) | E ( )
+          </div>
+        </div>
+      `;
+    }
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Gabarito - ${examTitle}</title><style>body{margin:0;background:#f7fafc}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body>${pagesHTML}</body></html>`;
+  };
+
+  const openPrintWindow = (html: string, autoPrintDelay = 250) => {
+    const w = window.open("", "_blank");
+    if (!w) {
+      showInvokeError("Permita pop-ups para esta ação.");
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => {
+      try {
+        w.focus();
+        w.print();
+      } catch {
+        /* noop */
+      }
+    }, autoPrintDelay);
+  };
+
+  const handlePrint = () => {
+    const html = buildPrintHTML();
+    if (html) openPrintWindow(html);
+  };
+
+  const handleExportPDF = () => {
+    const html = buildPrintHTML();
+    if (!html) return;
+    const pdfHtml = html.replace("</head>", `<style>@page{size:A4;margin:15mm}</style></head>`);
+    openPrintWindow(pdfHtml, 300);
+  };
+
+  // Keyboard navigation: A-E to answer focused, arrows to move
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (focusedIdx === null) return;
+      const target = e.target as HTMLElement;
+      // Skip when typing into inputs (selects use roving)
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") return;
+
+      const key = e.key.toUpperCase();
+      if (letterOptions.includes(key)) {
+        e.preventDefault();
+        setAnswer(focusedIdx, key);
+      } else if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        setEntries(prev => prev.map((it, i) => (i === focusedIdx ? { ...it, answer: "" } : it)));
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIdx(i => Math.min((i ?? 0) + 1, entries.length - 1));
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIdx(i => Math.max((i ?? 0) - 1, 0));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, focusedIdx, letterOptions, setAnswer, entries.length]);
+
+  // Scroll sync: track topmost visible question in the editor and mirror it in the panel
+  useEffect(() => {
+    if (!open || !syncScroll) return;
+    const scroller = document.querySelector(".editor-desk") as HTMLElement | null;
+    const pm = document.querySelector(".ProseMirror") as HTMLElement | null;
+    if (!scroller || !pm) return;
+
+    let raf = 0;
+    const compute = () => {
+      raf = 0;
+      const rect = scroller.getBoundingClientRect();
+      const threshold = rect.top + 80;
+      // Find bold paragraphs whose first text starts with "N)" or "Questão N)"
+      const paragraphs = pm.querySelectorAll("p");
+      let topNum: number | null = null;
+      for (const p of Array.from(paragraphs)) {
+        const text = (p.textContent || "").trim();
+        const m = text.match(/^(?:Questão\s+)?(\d+)\)/);
+        if (!m) continue;
+        const r = p.getBoundingClientRect();
+        if (r.bottom < threshold) {
+          topNum = parseInt(m[1], 10);
+        } else {
+          if (topNum === null) topNum = parseInt(m[1], 10);
+          break;
+        }
+      }
+      if (topNum !== null) setActiveQuestionNum(topNum);
+    };
+
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(compute);
+    };
+
+    compute();
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [open, syncScroll]);
+
+  // When activeQuestionNum changes, scroll the matching cell into view in the panel
+  useEffect(() => {
+    if (!open || !syncScroll || activeQuestionNum === null) return;
+    if (userScrollingPanelRef.current) return;
+    const idx = entries.findIndex(e => e.questionNum === activeQuestionNum);
+    if (idx < 0) return;
+    const cell = scrollBodyRef.current?.querySelector(`[data-answer-cell="${idx}"]`) as HTMLElement | null;
+    if (!cell || !scrollBodyRef.current) return;
+    const body = scrollBodyRef.current;
+    const cellRect = cell.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const offset = (cellRect.top - bodyRect.top) - body.clientHeight / 2 + cell.offsetHeight / 2;
+    body.scrollBy({ top: offset, behavior: "smooth" });
+  }, [activeQuestionNum, syncScroll, open, entries]);
+
+  // Detect manual panel scrolling so we don't fight the user
+  useEffect(() => {
+    const body = scrollBodyRef.current;
+    if (!body || !open) return;
+    let timer: number | null = null;
+    const onWheel = () => {
+      userScrollingPanelRef.current = true;
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => { userScrollingPanelRef.current = false; }, 1200);
+    };
+    body.addEventListener("wheel", onWheel, { passive: true });
+    body.addEventListener("touchmove", onWheel, { passive: true });
+    return () => {
+      body.removeEventListener("wheel", onWheel);
+      body.removeEventListener("touchmove", onWheel);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [open]);
+
+  const invalidSet = useMemo(
+    () => new Set(validation.invalid.map(i => i.q)),
+    [validation.invalid]
+  );
+
+  const jumpToNextInvalid = useCallback(() => {
+    if (validation.invalid.length === 0) return;
+    const current = focusedIdx ?? -1;
+    const invalidIdxs = entries
+      .map((e, i) => (invalidSet.has(e.questionNum) ? i : -1))
+      .filter(i => i >= 0);
+    const next = invalidIdxs.find(i => i > current) ?? invalidIdxs[0];
+    setFocusedIdx(next);
+    // Scroll the cell into view
+    setTimeout(() => {
+      const el = document.querySelector(`[data-answer-cell="${next}"]`) as HTMLElement | null;
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 0);
+  }, [validation.invalid, entries, invalidSet, focusedIdx]);
+
+  if (!open) return null;
+
+  const renderQuestionRow = (entry: AnswerKeyEntry, globalIdx: number) => {
+    const isInvalid = invalidSet.has(entry.questionNum);
+    const isFocused = focusedIdx === globalIdx;
+    const isActive = syncScroll && activeQuestionNum === entry.questionNum;
+    const qNum = String(entry.questionNum).padStart(2, "0");
+    return (
+      <tr
+        key={globalIdx}
+        data-answer-cell={globalIdx}
+        onClick={() => setFocusedIdx(globalIdx)}
+        className={`cursor-pointer transition-colors ${
+          isInvalid
+            ? "bg-destructive/10 ring-1 ring-destructive"
+            : isFocused
+              ? "bg-primary/5 ring-1 ring-primary"
+              : isActive
+                ? "bg-primary/10 ring-1 ring-primary/60"
+                : "hover:bg-muted/50"
+        }`}
+      >
+        <td className="text-center p-1 w-10">
+          <span className={`text-[10px] font-bold ${isInvalid ? "text-destructive" : "text-foreground"}`}>
+            {qNum}
+          </span>
+          {isInvalid && <AlertTriangle className="inline h-3 w-3 text-destructive ml-0.5" />}
+        </td>
+        {letterOptions.map(letter => {
+          const activeColors: Record<string, string> = {
+            A: "bg-red-500 hover:bg-red-600 text-white",
+            B: "bg-blue-500 hover:bg-blue-600 text-white",
+            C: "bg-emerald-500 hover:bg-emerald-600 text-white",
+            D: "bg-amber-500 hover:bg-amber-600 text-white",
+            E: "bg-purple-500 hover:bg-purple-600 text-white",
+          };
+          const activeColor = activeColors[letter.toUpperCase()] || "bg-primary text-primary-foreground";
+          return (
+            <td key={letter} className="text-center p-0.5 w-10" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setAnswer(globalIdx, letter)}
+                className={`text-[10px] font-bold rounded w-full h-5 transition-colors ${
+                  entry.answer === letter 
+                    ? activeColor 
+                    : "bg-muted/30 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {letter}
+              </button>
+            </td>
+          );
+        })}
+      </tr>
+    );
+  };
+
+  return (
+    <div className="w-[320px] flex-shrink-0 bg-card border border-border rounded-lg overflow-hidden animate-slide-in-left flex flex-col max-h-[calc(100vh-180px)] sticky top-[140px] self-start">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <ClipboardList className="h-4 w-4 text-primary" />
+          Gabarito da Prova
+        </h3>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSyncScroll(v => !v)}
+            className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${syncScroll ? "bg-primary/10 border-primary/30 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
+            title={syncScroll ? "Sincronização de rolagem ativa — clique para desativar" : "Sincronização de rolagem desativada — clique para ativar"}
+          >
+            Sync {syncScroll ? "ON" : "OFF"}
+          </button>
+          <button onClick={() => onOpenChange(false)} className="text-muted-foreground hover:text-foreground transition-colors" title="Fechar">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="px-4 py-2 border-b border-border space-y-1.5">
+        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+          <Keyboard className="h-3 w-3" /> Selecione uma questão e digite A–{letterOptions[letterOptions.length - 1]} no teclado.
+        </p>
+        {aiAnswers && aiAnswers.length > 0 && (
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7 w-full bg-primary/5 border-primary/20 text-primary hover:bg-primary/10" onClick={autoFillFromAI}>
+            <Wand2 className="h-3 w-3" />
+            Preencher automaticamente ({aiAnswers.length} respostas)
+          </Button>
+        )}
+        <div className="h-1 w-full bg-muted rounded overflow-hidden">
+          <div className="h-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+        </div>
+      </div>
+
+      <div ref={scrollBodyRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 scroll-smooth">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Alternativas</Label>
+            <Select value={altCount} onValueChange={setAltCount}>
+              <SelectTrigger className="w-[110px] h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3 (A-C)</SelectItem>
+                <SelectItem value="4">4 (A-D)</SelectItem>
+                <SelectItem value="5">5 (A-E)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Badge variant="outline" className="mt-5 text-[10px]">
+            {filledCount}/{entries.length} ({progressPct}%)
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button variant="outline" size="sm" className="gap-1 text-xs h-7 px-2" onClick={addQuestion} title="Adicionar questão">
+            <Plus className="h-3 w-3" /> Questão
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-1 text-xs h-7 px-2 text-destructive" onClick={removeLastQuestion} disabled={entries.length <= 1} title="Remover última">
+            <Trash2 className="h-3 w-3" />
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-1 text-xs h-7 px-2" onClick={clearAll} disabled={filledCount === 0} title="Limpar todas as respostas">
+            <Eraser className="h-3 w-3" /> Limpar
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-1 text-xs h-7 px-2" onClick={handleCopy} disabled={filledCount === 0} title="Copiar (1-A, 2-B, ...)">
+            <Copy className="h-3 w-3" />
+          </Button>
+        </div>
+
+        <div ref={printRef}>
+          {entries.length > 0 && subjectSections && subjectSections.length > 0 ? (
+            <div className="space-y-3">
+              {(() => {
+                let globalIdx = 0;
+                const totalSectionQ = subjectSections.reduce((s, sec) => s + sec.questionCount, 0);
+                const elements: React.ReactNode[] = [];
+
+                subjectSections.forEach((section, sIdx) => {
+                  const startIdx = globalIdx;
+                  const sectionEntries = entries.slice(startIdx, startIdx + section.questionCount);
+                  globalIdx += section.questionCount;
+                  if (sectionEntries.length === 0) return;
+                  elements.push(
+                    <div key={`section-${sIdx}`} className="overflow-x-auto">
+                      <p className="text-[9px] font-semibold text-primary/70 uppercase tracking-wider border-b border-primary/10 pb-1 mb-1">
+                        {section.name}
+                      </p>
+                      <table className="w-full text-xs border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="p-1 text-center font-semibold text-muted-foreground w-10">Q</th>
+                            {letterOptions.map(l => (
+                              <th key={l} className="p-1 text-center font-semibold text-muted-foreground w-10">{l}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sectionEntries.map((entry, i) => renderQuestionRow(entry, startIdx + i))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                });
+
+                if (totalSectionQ < entries.length) {
+                  const remaining = entries.slice(totalSectionQ);
+                  elements.push(
+                    <div key="remaining" className="overflow-x-auto">
+                      <table className="w-full text-xs border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="p-1 text-center font-semibold text-muted-foreground w-10">Q</th>
+                            {letterOptions.map(l => (
+                              <th key={l} className="p-1 text-center font-semibold text-muted-foreground w-10">{l}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {remaining.map((entry, i) => renderQuestionRow(entry, totalSectionQ + i))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                }
+
+                return elements;
+              })()}
+            </div>
+          ) : entries.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr>
+                    <th className="p-1 text-center font-semibold text-muted-foreground w-10">Q</th>
+                    {letterOptions.map(l => (
+                      <th key={l} className="p-1 text-center font-semibold text-muted-foreground w-10">{l}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((entry, idx) => renderQuestionRow(entry, idx))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </div>
+
+        <p className="text-[11px] text-muted-foreground">
+          Para questões discursivas, deixe em branco.
+        </p>
+
+        {(validation.missing.length > 0 || validation.invalid.length > 0) && (
+          <div className={`text-[11px] rounded border p-2 space-y-1 ${validation.invalid.length > 0 ? "border-destructive/40 bg-destructive/5 text-destructive" : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"}`}>
+            {validation.invalid.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    {validation.invalid.length} resposta(s) fora de A–{letterOptions[letterOptions.length - 1]}.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={jumpToNextInvalid}
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold underline hover:no-underline"
+                      title="Ir para a próxima questão inválida"
+                    >
+                      Próxima <ArrowRight className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBatchOpen(o => !o)}
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold underline hover:no-underline"
+                      title="Corrigir todas as inválidas em lote"
+                    >
+                      <Sparkles className="h-3 w-3" /> Corrigir em lote
+                    </button>
+                  </div>
+                </div>
+                {batchOpen && (
+                  <div className="rounded border border-destructive/30 bg-card p-2 space-y-1.5 text-foreground">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                      Aplicar a {validation.invalid.length} questão(ões):
+                    </p>
+                    <Select value={batchStrategy} onValueChange={(v: typeof batchStrategy) => setBatchStrategy(v)}>
+                      <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="suggest">Sugestão automática (mais próxima válida)</SelectItem>
+                        {aiAnswers && aiAnswers.length > 0 && (
+                          <SelectItem value="ai">Usar resposta da IA quando disponível</SelectItem>
+                        )}
+                        <SelectItem value="fixed">Definir letra fixa…</SelectItem>
+                        <SelectItem value="clear">Limpar (deixar em branco)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {batchStrategy === "fixed" && (
+                      <Select value={batchLetter} onValueChange={setBatchLetter}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {letterOptions.map(l => (
+                            <SelectItem key={l} value={l}>{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <div className="flex justify-end gap-1.5">
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setBatchOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button size="sm" className="h-7 text-xs gap-1" onClick={applyBatchFix}>
+                        <Sparkles className="h-3 w-3" /> Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {validation.missing.length > 0 && (
+              <p>○ {validation.missing.length} questão(ões) sem resposta.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 py-3 border-t border-border flex justify-between gap-2">
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={handlePrint} className="gap-1.5 text-xs" title="Imprimir gabarito">
+            <Printer className="h-3.5 w-3.5" />
+            Imprimir
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleExportPDF} className="gap-1.5 text-xs" title="Exportar como PDF">
+            <FileDown className="h-3.5 w-3.5" />
+            PDF
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button size="sm" onClick={handleInsert} className="gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Inserir Gabarito
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

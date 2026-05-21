@@ -1,0 +1,31 @@
+project_id = "ddgitchfrijbyhqclxqk"
+
+[functions.generate-questions]
+verify_jwt = false
+
+[functions.read-answer-sheet]
+verify_jwt = false
+
+[functions.create-mercadopago-preference]
+verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.transcribe-audio]
+verify_jwt = false
+
+[functions.student-diagnostic]
+verify_jwt = false
+
+[functions.adaptive-analysis]
+verify_jwt = false
+
+[functions.help-assistant]
+verify_jwt = false
+
+[functions.spell-check]
+verify_jwt = false

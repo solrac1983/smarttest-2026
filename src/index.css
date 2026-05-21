@@ -1,0 +1,1568 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&display=swap');
+
+#lovable-badge {
+  display: none !important;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    --primary: 213 80% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 93%;
+    --secondary-foreground: 215 25% 20%;
+
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 10% 48%;
+
+    --accent: 199 85% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 60% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 36 90% 52%;
+    --warning-foreground: 36 90% 15%;
+
+    --info: 213 80% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 215 18% 88%;
+    --input: 215 18% 88%;
+    --ring: 213 80% 50%;
+
+    --radius: 1rem;
+
+    --shadow-elegant: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1), 0 10px 15px -3px rgb(0 0 0 / 0.05);
+    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05), 0 0 0 1px rgb(0 0 0 / 0.05);
+
+    --sidebar-background: 215 35% 14%;
+    --sidebar-foreground: 210 20% 88%;
+    --sidebar-primary: 213 80% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 30% 20%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 215 30% 20%;
+    --sidebar-ring: 213 80% 55%;
+    --sidebar-muted: 215 15% 45%;
+
+    /* ─── Editor typography tokens (shared by ribbon + body) ─── */
+    --editor-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --editor-font-serif: 'Times New Roman', Georgia, serif;
+    --editor-text-size: 14px;
+    --editor-text-size-print: 12pt;
+    --editor-line-height: 1.55;
+    --editor-tracking: 0.005em;
+    --editor-heading-tracking: -0.012em;
+    --editor-muted: 215 15% 42%;
+    --page-bg: #ffffff;
+    --desk-bg: #f1f5f9;
+
+    /* 📄 Global Page Dimensions (A4 Default) */
+    --page-w: 794px;
+    --page-h: 1123px;
+    --page-gap: 40px;
+    --page-cycle: calc(var(--page-h) + var(--page-gap));
+    --page-pad-top: 72px;
+    --page-pad-bottom: 72px;
+    --page-pad-left: 72px;
+    --page-pad-right: 72px;
+  }
+
+  .dark {
+    --background: 215 32% 6%;
+    --foreground: 210 20% 96%;
+
+    --card: 215 28% 10%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 215 28% 10%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 213 85% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 22% 14%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 215 22% 12%;
+    --muted-foreground: 215 14% 62%;
+
+    --accent: 199 85% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 60% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 215 25% 16%;
+    --input: 215 25% 16%;
+    --ring: 213 80% 55%;
+
+    --sidebar-background: 215 35% 5%;
+    --sidebar-foreground: 210 20% 88%;
+    --sidebar-primary: 213 80% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 30% 12%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 215 30% 12%;
+    --sidebar-ring: 213 80% 55%;
+    --sidebar-muted: 215 15% 42%;
+    --page-bg: hsl(215 28% 10%);
+    --desk-bg: #0f172a;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/60 shadow-sm;
+  }
+
+  .surface-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border) / 0.7);
+    box-shadow: var(--shadow-card);
+    border-radius: calc(var(--radius) + 2px);
+  }
+
+  .surface-elevated {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border) / 0.6);
+    box-shadow: var(--shadow-elegant);
+    border-radius: calc(var(--radius) + 4px);
+  }
+
+  .status-draft {
+    @apply bg-muted text-muted-foreground;
+  }
+  .status-sent {
+    @apply bg-warning/15 text-warning;
+  }
+  .status-review {
+    @apply bg-warning/15 text-warning;
+  }
+  .status-approved {
+    @apply bg-success/15 text-success;
+  }
+  .status-overdue {
+    @apply bg-destructive/15 text-destructive;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Word-like A4 Page System (REBUILT FROM SCRATCH)
+   ═══════════════════════════════════════════════════════════ */
+
+.editor-desk {
+  background: var(--desk-bg);
+  min-height: 0;
+  scroll-behavior: smooth;
+  overflow-y: auto;
+}
+
+.editor-desk-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 0 120px;
+  gap: 0;
+}
+
+.editor-ui .word-ribbon .lucide,
+.editor-ui .editor-floating-toolbar .lucide,
+.editor-page-settings-dialog .lucide {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  stroke-width: 1.85;
+  transition: transform 0.16s ease, opacity 0.16s ease, color 0.16s ease;
+}
+
+.editor-ui .word-status-bar .lucide {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  stroke-width: 1.9;
+  transition: transform 0.16s ease, opacity 0.16s ease, color 0.16s ease;
+}
+
+.editor-ui .word-ribbon button:hover .lucide,
+.editor-ui .editor-floating-toolbar button:hover .lucide,
+.editor-page-settings-dialog button:hover .lucide,
+.editor-ui .word-status-bar button:hover .lucide {
+  transform: translateY(-0.5px);
+}
+
+.exam-page {
+  position: relative;
+  /* Cycle = Page Height + Gap */
+  --page-cycle: calc(var(--page-h) + var(--page-gap));
+  
+  background-color: var(--desk-bg);
+  background-image: 
+    /* Paper background repeated precisely every page-cycle */
+    linear-gradient(
+      to bottom,
+      #ffffff 0,
+      #ffffff var(--page-h),
+      transparent var(--page-h),
+      transparent var(--page-cycle)
+    );
+  background-size: 100% var(--page-cycle);
+  background-repeat: repeat-y;
+  background-attachment: local;
+  background-position: top center;
+  min-height: var(--page-h);
+  transition: background-size 0.2s ease;
+  width: var(--page-w);
+  margin: 0 auto;
+  filter: drop-shadow(0 10px 25px rgba(15, 23, 42, 0.12));
+}
+
+/* ─── Layout Horizontal (Lado a Lado) ─── */
+.exam-page.layout-horizontal {
+  --page-cycle-x: calc(var(--page-w) + var(--page-gap));
+  
+  background-image: linear-gradient(
+    to right,
+    #ffffff 0,
+    #ffffff var(--page-w),
+    transparent var(--page-w),
+    transparent var(--page-cycle-x)
+  );
+  background-size: var(--page-cycle-x) 100%;
+  background-repeat: repeat-x;
+  background-position: left top;
+  
+  height: var(--page-h);
+  min-height: var(--page-h);
+  width: auto;
+  min-width: var(--page-w);
+  margin: 0;
+}
+
+.exam-page.layout-horizontal .tiptap,
+.exam-page.layout-horizontal .ProseMirror {
+  column-width: calc(var(--page-w) - var(--page-pad-left) - var(--page-pad-right));
+  column-gap: calc(var(--page-gap) + var(--page-pad-left) + var(--page-pad-right));
+  column-fill: auto;
+  
+  height: calc(var(--page-h) - var(--page-pad-top) - var(--page-pad-bottom));
+  min-height: calc(var(--page-h) - var(--page-pad-top) - var(--page-pad-bottom));
+  
+  padding: 0 !important;
+  margin-top: var(--page-pad-top);
+  margin-left: var(--page-pad-left);
+}
+
+.exam-page.layout-horizontal .hard-page-break {
+  break-after: column;
+}
+
+.exam-page.layout-horizontal::after {
+  content: none !important; /* Hide margin guides in horizontal mode to avoid misalignment */
+}
+
+.exam-page .tiptap,
+.exam-page .ProseMirror {
+  position: relative;
+  width: 100%;
+  min-height: var(--page-h);
+  box-sizing: border-box;
+  
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  
+  font-family: 'Arial', sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  color: #020617;
+  
+  padding: var(--page-pad-top, 72px) var(--page-pad-right, 72px) var(--page-pad-bottom, 72px) var(--page-pad-left, 72px) !important;
+}
+
+/* 📏 Paper Borders and Margin Guides (Rendered on the Tiptap layer) */
+.exam-page .tiptap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  
+  background-image: 
+    /* Left Border */
+    linear-gradient(to right, var(--page-border-color, #cbd5e1) var(--page-border-width, 1.5px), transparent var(--page-border-width, 1.5px)),
+    /* Right Border */
+    linear-gradient(to left, var(--page-border-color, #cbd5e1) var(--page-border-width, 1.5px), transparent var(--page-border-width, 1.5px)),
+    /* Top & Bottom Borders - Exact A4 Height */
+    repeating-linear-gradient(
+      to bottom,
+      var(--page-border-color, #cbd5e1) 0,
+      var(--page-border-color, #cbd5e1) var(--page-border-width, 1.5px),
+      transparent var(--page-border-width, 1.5px),
+      transparent calc(var(--page-h) - var(--page-border-width, 1.5px)),
+      var(--page-border-color, #cbd5e1) calc(var(--page-h) - var(--page-border-width, 1.5px)),
+      var(--page-border-color, #cbd5e1) var(--page-h),
+      transparent var(--page-h),
+      transparent var(--page-cycle)
+    );
+  background-size: 100% var(--page-cycle);
+  background-repeat: repeat-y;
+}
+
+/* 🔵 Margin Guide Overlays (Restricted to Paper) */
+.exam-page .tiptap.show-margin-guides::after {
+  background-image: 
+    /* Vertical Guides */
+    linear-gradient(to right, transparent var(--page-pad-left), rgba(59, 130, 246, 0.15) var(--page-pad-left), rgba(59, 130, 246, 0.15) calc(var(--page-pad-left) + 1px), transparent calc(var(--page-pad-left) + 1px)),
+    linear-gradient(to left, transparent var(--page-pad-right), rgba(59, 130, 246, 0.2) var(--page-pad-right), rgba(59, 130, 246, 0.2) calc(var(--page-pad-right) + 1px), transparent calc(var(--page-pad-right) + 1px)),
+    /* Horizontal Guides - drawn only on usable content area */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent var(--page-pad-top),
+      rgba(59, 130, 246, 0.2) var(--page-pad-top),
+      rgba(59, 130, 246, 0.2) calc(var(--page-pad-top) + 1px),
+      transparent calc(var(--page-pad-top) + 1px),
+      transparent calc(var(--page-h) - var(--page-pad-bottom)),
+      rgba(59, 130, 246, 0.2) calc(var(--page-h) - var(--page-pad-bottom)),
+      rgba(59, 130, 246, 0.2) calc(var(--page-h) - var(--page-pad-bottom) + 1px),
+      transparent calc(var(--page-h) - var(--page-pad-bottom) + 1px),
+      transparent var(--page-cycle)
+    ),
+    /* Base Borders (Repeated to match logic above) */
+    linear-gradient(to right, var(--page-border-color, #cbd5e1) var(--page-border-width, 1.5px), transparent var(--page-border-width, 1.5px)),
+    linear-gradient(to left, var(--page-border-color, #cbd5e1) var(--page-border-width, 1.5px), transparent var(--page-border-width, 1.5px)),
+    repeating-linear-gradient(
+      to bottom,
+      var(--page-border-color, #cbd5e1) 0,
+      var(--page-border-color, #cbd5e1) var(--page-border-width, 1.5px),
+      transparent var(--page-border-width, 1.5px),
+      transparent calc(var(--page-h) - var(--page-border-width, 1.5px)),
+      var(--page-border-color, #cbd5e1) calc(var(--page-h) - var(--page-border-width, 1.5px)),
+      var(--page-border-color, #cbd5e1) var(--page-h),
+      transparent var(--page-h),
+      transparent var(--page-cycle)
+    );
+}
+
+/* 📜 Continuous Scroll Mode */
+.continuous-scroll-mode {
+  --page-gap: 0px !important;
+  background-image: none !important;
+  background-color: var(--page-bg) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+  border-radius: var(--radius);
+  border: var(--page-border-width, 0px) var(--page-border-style, solid) var(--page-border-color, transparent);
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+.continuous-scroll-mode .tiptap::after {
+  display: none !important; /* Hides margin guides and base borders */
+}
+
+.continuous-scroll-mode .page-break-widget {
+  height: 0 !important;
+  border: none !important;
+  opacity: 0 !important;
+  pointer-events: none;
+  background: transparent !important;
+}
+
+.continuous-scroll-mode .page-break-label {
+  display: none !important;
+}
+
+
+/* ✂️ Page Break Widget - The Gap */
+.page-break-widget {
+  display: block;
+  margin: 0;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  pointer-events: none;
+  user-select: none;
+  position: relative;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  z-index: 5;
+
+  --page-break-gap: var(--page-gap, 24px);
+  --page-break-next-safe-top: var(--page-pad-top, 0px);
+  --page-break-current-remainder: calc(100% - var(--page-break-gap) - var(--page-break-next-safe-top));
+
+  background-color: #ffffff !important;
+  background-image:
+    linear-gradient(
+      to bottom,
+      #ffffff 0,
+      #ffffff var(--page-break-current-remainder),
+      var(--desk-bg) var(--page-break-current-remainder),
+      var(--desk-bg) calc(var(--page-break-current-remainder) + var(--page-break-gap)),
+      #ffffff calc(var(--page-break-current-remainder) + var(--page-break-gap)),
+      #ffffff 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--page-break-current-remainder) - var(--page-border-width, 1px)),
+      var(--page-border-color, #cbd5e1) calc(var(--page-break-current-remainder) - var(--page-border-width, 1px)),
+      var(--page-border-color, #cbd5e1) var(--page-break-current-remainder),
+      transparent var(--page-break-current-remainder),
+      transparent calc(var(--page-break-current-remainder) + var(--page-break-gap) - var(--page-border-width, 1px)),
+      var(--page-border-color, #cbd5e1) calc(var(--page-break-current-remainder) + var(--page-break-gap) - var(--page-border-width, 1px)),
+      var(--page-border-color, #cbd5e1) calc(var(--page-break-current-remainder) + var(--page-break-gap)),
+      transparent calc(var(--page-break-current-remainder) + var(--page-break-gap)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      var(--page-border-color, #cbd5e1) 0,
+      var(--page-border-color, #cbd5e1) var(--page-break-current-remainder),
+      transparent var(--page-break-current-remainder),
+      transparent calc(var(--page-break-current-remainder) + var(--page-break-gap)),
+      var(--page-border-color, #cbd5e1) calc(var(--page-break-current-remainder) + var(--page-break-gap)),
+      var(--page-border-color, #cbd5e1) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      var(--page-border-color, #cbd5e1) 0,
+      var(--page-border-color, #cbd5e1) var(--page-break-current-remainder),
+      transparent var(--page-break-current-remainder),
+      transparent calc(var(--page-break-current-remainder) + var(--page-break-gap)),
+      var(--page-border-color, #cbd5e1) calc(var(--page-break-current-remainder) + var(--page-break-gap)),
+      var(--page-border-color, #cbd5e1) 100%
+    );
+  background-repeat: no-repeat;
+  background-size:
+    100% 100%,
+    100% 100%,
+    var(--page-border-width, 1px) 100%,
+    var(--page-border-width, 1px) 100%;
+  background-position:
+    left top,
+    left top,
+    left top,
+    right top;
+}
+
+.page-break-widget .page-separator-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  border-top: 1px dashed rgba(59, 130, 246, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-break-widget .page-break-label {
+  transform: translateY(-50%);
+  background: color-mix(in srgb, var(--desk-bg) 92%, white 8%);
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.92;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+
+/* Ensure blocks don't have double padding */
+.exam-page .tiptap p,
+.exam-page .ProseMirror p {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ─── Body typography — uses shared editor tokens ─── */
+.exam-page .tiptap,
+.exam-page .ProseMirror {
+  color: hsl(var(--foreground));
+}
+
+.exam-page .tiptap p,
+.exam-page .ProseMirror p {
+  margin-top: 0;
+  margin-bottom: 0.75em;
+  line-height: 1.65;
+}
+
+.exam-page .tiptap h1,
+.exam-page .ProseMirror h1 {
+  font-size: 2em;
+  line-height: 1.2;
+  font-weight: 800;
+  margin: 0 0 0.7em;
+  color: #020617;
+}
+
+.exam-page .tiptap h2,
+.exam-page .ProseMirror h2 {
+  font-size: 1.45em;
+  line-height: 1.3;
+  font-weight: 750;
+  margin: 1.2em 0 0.45em;
+  color: #020617;
+}
+
+.exam-page .tiptap h3,
+.exam-page .ProseMirror h3 {
+  font-size: 1.2em;
+  font-weight: 700;
+  margin: 1em 0 0.4em;
+}
+.exam-page .tiptap h4 {
+  font-size: 1.1em;
+  margin: 0.5em 0 0.2em;
+  font-weight: 600;
+}
+
+/* Modern blockquote — accent bar + soft tinted background */
+.exam-page .tiptap blockquote {
+  border-left: 4px solid #cbd5e1;
+  padding-left: 16px;
+  margin: 1em 0;
+  color: #475569;
+  max-width: 100%;
+}
+.dark .exam-page .tiptap blockquote {
+  background: hsl(var(--primary) / 0.07);
+  color: hsl(0 0% 100% / 0.7);
+}
+
+/* Lists — refined spacing and marker color */
+.exam-page .tiptap ul,
+.exam-page .tiptap ol {
+  padding-left: 1.6em;
+  margin: 0.45em 0;
+}
+.exam-page .tiptap ul { list-style-type: disc; }
+.exam-page .tiptap ol { list-style-type: decimal; }
+
+.exam-page .tiptap li {
+  margin-bottom: 0.18em;
+  line-height: var(--editor-line-height);
+}
+.exam-page .tiptap li::marker {
+  color: hsl(var(--primary) / 0.7);
+  font-weight: 600;
+}
+.exam-page .tiptap li > p {
+  margin: 0;
+}
+
+/* Tables — modern, soft borders, zebra rows, refined header */
+.exam-page .tiptap table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed;
+  margin: 0.7em 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 2px hsl(215 25% 15% / 0.04);
+}
+
+.exam-page .tiptap td,
+.exam-page .tiptap th {
+  border-right: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 8px 12px;
+  vertical-align: top;
+  line-height: 1.45;
+}
+.exam-page .tiptap td:last-child,
+.exam-page .tiptap th:last-child { border-right: none; }
+.exam-page .tiptap tr:last-child td { border-bottom: none; }
+
+.exam-page .tiptap th {
+  background: hsl(var(--muted) / 0.7);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: left;
+  color: hsl(var(--foreground));
+}
+
+.exam-page .tiptap tbody tr:nth-child(even) td {
+  background: hsl(var(--muted) / 0.25);
+}
+.dark .exam-page .tiptap tbody tr:nth-child(even) td {
+  background: hsl(0 0% 100% / 0.025);
+}
+
+
+.dark .exam-page .tiptap {
+  --desk-color: hsl(215 20% 10%);
+  --page-color: hsl(215 25% 16%);
+  --page-sep: hsl(215 20% 22%);
+  --guide-color: hsl(213 80% 60% / 0.15);
+  --grid-color: hsl(220 10% 28%);
+  --content-guide-color: hsl(var(--border) / 0.72);
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.25),
+    0 4px 12px rgba(0,0,0,0.15) !important;
+}
+/* dark mode page-break-widget already handled above */
+
+/* ─── Page break (hr) — invisible, just spacing logic ─── */
+.tiptap hr {
+  border: none;
+  margin: 0;
+  padding: 0;
+  height: 0;
+  opacity: 0;
+}
+
+/* ─── Blank page spacer — exactly one A4 page ─── */
+.tiptap .blank-page-spacer,
+.page-trailing-spacer {
+  display: block;
+  user-select: none;
+  pointer-events: none;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.tiptap .blank-page-spacer {
+  height: 297mm;
+  min-height: 297mm;
+  max-height: 297mm;
+  width: 100%;
+}
+
+.tiptap hr + .blank-page-spacer {
+  padding-top: 0 !important;
+}
+
+/* ─── Question blocks (structured exam questions) ─── */
+.tiptap .exam-question-block {
+  position: relative;
+  padding: 6px 0 4px 28px;
+  margin: 10px 0;
+  border-left: 2px solid hsl(var(--primary) / 0.25);
+}
+.tiptap .exam-question-block::before {
+  content: counter(exam-question-counter, decimal) ".";
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  font-weight: 700;
+  color: hsl(var(--primary));
+  font-size: 0.95em;
+}
+.tiptap { counter-reset: exam-question-counter; }
+.tiptap .exam-question-block { counter-increment: exam-question-counter; }
+.tiptap .exam-question-stem {
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.tiptap .exam-alternative-list {
+  margin-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tiptap .exam-alternative-item {
+  position: relative;
+  padding-left: 28px;
+  min-height: 1.4em;
+}
+.tiptap .exam-alternative-item::before {
+  content: attr(data-prefix);
+  position: absolute;
+  left: 4px;
+  top: 0;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+.tiptap .exam-alternative-item.is-correct {
+  background: hsl(var(--primary) / 0.06);
+  border-radius: 4px;
+}
+.tiptap .exam-alternative-item.is-correct::before {
+  color: hsl(var(--primary));
+}
+.tiptap .exam-alternative-item.is-correct::after {
+  content: "✓";
+  position: absolute;
+  right: 4px;
+  top: 0;
+  color: hsl(var(--primary));
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .exam-page { width: 100%; }
+  .exam-page .tiptap {
+    min-height: auto;
+    --page-pad-left: 20px;
+    --page-pad-right: 20px;
+    --page-pad-top: 20px;
+    --page-pad-bottom: 20px;
+  }
+}
+
+/* ─── Page Header/Footer Overlays — unified editor typography ─── */
+.page-header-overlay,
+.page-footer-overlay {
+  position: absolute;
+  left: var(--page-pad-left, 60px);
+  right: var(--page-pad-right, 60px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  user-select: none;
+
+  /* Shared typography tokens with ribbon + body */
+  font-family: var(--editor-font);
+  font-size: calc(var(--editor-text-size) - 4px); /* slightly smaller than body */
+  line-height: 1.3;
+  letter-spacing: var(--editor-tracking);
+  font-feature-settings: "kern" 1, "liga" 1, "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--editor-muted));
+  z-index: 5;
+}
+
+.page-header-overlay {
+  border-bottom: 1px solid hsl(var(--border) / 0.82);
+  padding-bottom: 6px;
+}
+
+.page-footer-overlay {
+  border-top: 1px solid hsl(var(--border) / 0.82);
+  padding-top: 6px;
+}
+
+.dark .page-header-overlay,
+.dark .page-footer-overlay {
+  color: hsl(0 0% 100% / 0.55);
+  border-color: hsl(0 0% 100% / 0.12);
+}
+
+/* Three-column layout: left / center / right — equal weighting, no overlap */
+.page-hf-left,
+.page-hf-center,
+.page-hf-right {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-hf-left   { text-align: left; }
+.page-hf-center { text-align: center; }
+.page-hf-right  { text-align: right; }
+
+/* Page numbers / counters — small caps tabular feel */
+.page-hf-left .page-number,
+.page-hf-center .page-number,
+.page-hf-right .page-number {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* Force KaTeX equations to use foreground color */
+.katex,
+.katex * {
+  color: hsl(var(--foreground)) !important;
+}
+.katex .sqrt .surd {
+  color: hsl(var(--foreground)) !important;
+}
+.katex .frac-line {
+  border-bottom-color: hsl(var(--foreground)) !important;
+  background: hsl(var(--foreground)) !important;
+}
+
+/* ─── Page-aware overflow: break content across pages ─── */
+@media screen {
+  .exam-page .tiptap {
+    overflow: visible;
+  }
+
+  .exam-page .tiptap img {
+    max-width: 100% !important;
+    height: auto;
+  }
+  .exam-page .tiptap table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed;
+  }
+
+  .exam-page .tiptap p,
+  .exam-page .tiptap li,
+  .exam-page .tiptap h1,
+  .exam-page .tiptap h2,
+  .exam-page .tiptap h3,
+  .exam-page .tiptap table,
+  .exam-page .tiptap blockquote {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    hyphens: auto;
+  }
+}
+
+@media print {
+  .editor-desk {
+    background: transparent !important;
+  }
+
+  .editor-page-shell {
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+
+  .page-break-widget {
+    height: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    break-before: page;
+    page-break-before: always;
+  }
+}
+
+/* ─── Print styles: show only the exam page ─── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .exam-page,
+  .exam-page * {
+    visibility: visible !important;
+  }
+
+  .exam-page {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  nav, aside, header, footer,
+  [data-sidebar], .sticky,
+  button, .glass-card {
+    display: none !important;
+  }
+
+  @page {
+    margin: 15mm;
+  }
+}
+
+/* Format Painter active state */
+.format-painter-active {
+  cursor: crosshair !important;
+  outline: 2px dashed hsl(var(--primary) / 0.4) !important;
+  outline-offset: 4px;
+  border-radius: 4px;
+  transition: outline 0.2s ease;
+}
+
+.format-painter-active::selection,
+.format-painter-active *::selection {
+  background: hsl(var(--primary) / 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Custom formatting support for Standalone Exams (multi-column)
+   ═══════════════════════════════════════════════════════════ */
+.exam-wrapper .exam-page .tiptap {
+  font-family: var(--exam-font-family, inherit);
+  font-size: var(--exam-font-size, inherit);
+}
+
+.exam-wrapper[data-columns="2"] .exam-page .tiptap {
+  column-count: 2;
+  column-gap: 24px;
+}
+
+.exam-wrapper[data-columns="3"] .exam-page .tiptap {
+  column-count: 3;
+  column-gap: 24px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Template "Personalizado" – ENEM-style: 2-col, gray header bars
+   Reference: Official simulado format with gray question bars
+   ═══════════════════════════════════════════════════════════ */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap {
+  text-align: justify;
+  font-family: 'Arial', 'Helvetica', sans-serif;
+  font-size: 10pt;
+  line-height: 1.45;
+  color: #1a1a1a;
+}
+
+/* ── Question title bars (h2, h3, h4) — solid gray background ── */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h2,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h3,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h4 {
+  background: hsl(0 0% 82%);
+  padding: 3px 8px;
+  margin: 14px 0 6px 0;
+  font-size: 10pt;
+  font-weight: 700;
+  border: none;
+  break-inside: avoid;
+  break-after: avoid;
+  text-align: left;
+  text-indent: 0;
+  line-height: 1.5;
+}
+
+/* First heading: no top margin */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h2:first-child,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h3:first-child,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h4:first-child {
+  margin-top: 0;
+}
+
+/* ── Section headers (e.g., "LINGUAGENS, CÓDIGOS...") — bold, uppercase ── */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h1 {
+  font-size: 11pt;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  margin: 8px 0 4px 0;
+  padding: 0;
+  border: none;
+  background: none;
+  text-indent: 0;
+}
+
+/* ── Paragraphs: justified, only first paragraph of question stem has indent ── */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap p {
+  text-indent: 0;
+  text-align: justify;
+  line-height: 1.45;
+  margin: 0 0 4px 0;
+  break-inside: avoid;
+}
+
+/* First paragraph after a heading (question stem) gets 0.5cm indent */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h2 + p,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h3 + p,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h4 + p {
+  text-indent: 0.5cm;
+}
+
+/* Paragraphs right after headings: no extra top margin */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h2 + p + p,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h3 + p + p,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap h4 + p + p {
+  margin-top: 0;
+}
+
+/* ── Blockquotes (for text excerpts / italicized passages) ── */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap blockquote {
+  font-style: italic;
+  margin: 6px 0 6px 1em;
+  padding-left: 0.5em;
+  border-left: 2px solid hsl(0 0% 70%);
+  text-indent: 0;
+}
+
+/* ── Lists / Options (A-E) ── */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap ol,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap ul {
+  padding-left: 0;
+  margin: 4px 0 4px 0;
+  text-indent: 0;
+  list-style: none;
+}
+
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap ol li,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap ul li {
+  text-indent: 0;
+  padding-left: 0;
+  margin-bottom: 1px;
+  line-height: 1.45;
+}
+
+/* ── Images: centered, max-width constrained ── */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap img {
+  display: block;
+  margin: 8px auto;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Tables ── */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap table {
+  font-size: 9pt;
+  margin: 6px 0;
+  border-collapse: collapse;
+}
+
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap table td,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap table th {
+  border: 1px solid hsl(0 0% 70%);
+  padding: 2px 6px;
+}
+
+/* ── References / Sources (8pt, italic, right-aligned) ── */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap p > small,
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap small {
+  font-size: 8pt;
+  font-style: italic;
+  display: block;
+  text-align: right;
+  line-height: 1.35;
+  margin-top: 2px;
+  color: hsl(0 0% 30%);
+}
+
+/* Paragraphs that ARE references — detected by em wrapping the whole paragraph */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap p:has(> em:only-child) {
+  font-size: 8pt;
+  font-style: italic;
+  text-align: right;
+  line-height: 1.35;
+  margin-top: 2px;
+  text-indent: 0;
+  color: hsl(0 0% 30%);
+}
+
+/* Image captions (figcaption) */
+.exam-wrapper[data-template="personalizado"] .exam-page .tiptap figcaption {
+  font-size: 8pt;
+  font-style: italic;
+  text-align: right;
+  line-height: 1.35;
+  color: hsl(0 0% 30%);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Modern Editor Ribbon — glass, depth, unified typography
+   ═══════════════════════════════════════════════════════════
+   Typography tokens (single source of truth for the ribbon):
+   --rb-font          : font family for all ribbon text
+   --rb-tab-size      : tab label size
+   --rb-tab-weight    : tab label weight (active gets +100)
+   --rb-btn-label     : stacked button label size
+   --rb-group-label   : group caption size
+   --rb-tracking      : default letter-spacing
+   --rb-tracking-caps : letter-spacing for uppercase captions
+   =========================================================== */
+/* ============================================================
+   WORD-STYLE RIBBON (light theme, Microsoft Word inspired)
+   ============================================================ */
+.word-ribbon {
+  --rb-font: var(--editor-font);
+  --rb-tab-size: 12px;
+  --rb-tab-weight: 400;
+  --rb-btn-label: 10px;
+  --rb-group-label: 9px;
+  --rb-tracking: 0;
+  --rb-tracking-caps: 0.08em;
+
+  /* Word colors */
+  --rb-blue: 213 70% 38%;            /* #2B579A approx */
+  --rb-blue-strong: 213 75% 32%;
+  --rb-header-bg: 213 70% 38%;       /* Microsoft Word blue */
+  --rb-header-text: 0 0% 100%;       /* White text for header */
+  --rb-surface: 0 0% 100%;           /* white */
+  --rb-surface-2: 210 17% 98%;       /* off-white content */
+  --rb-text: 215 25% 18%;
+  --rb-text-muted: 215 14% 38%;
+  --rb-border: 214 15% 88%;
+  --rb-hover: 213 35% 94%;
+  --rb-active: 213 60% 90%;
+
+  font-family: var(--rb-font);
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: hsl(var(--rb-text));
+
+  background: hsl(var(--rb-header-bg));
+  /* The ribbon content will provide the shadow/border */
+}
+.dark .word-ribbon {
+  --rb-header-bg: 215 25% 12%;
+  --rb-header-text: 0 0% 96%;
+  --rb-surface: 215 25% 14%;
+  --rb-surface-2: 215 25% 12%;
+  --rb-text: 0 0% 96%;
+  --rb-text-muted: 215 12% 70%;
+  --rb-border: 215 18% 22%;
+  --rb-hover: 215 22% 20%;
+  --rb-active: 213 50% 25%;
+  --rb-blue: 213 90% 65%;
+  background: hsl(var(--rb-header-bg));
+}
+
+/* Tabs row */
+.word-ribbon-tabs {
+  background: transparent;
+  min-height: 36px;
+  gap: 2px;
+  padding-inline: 8px;
+  font-family: var(--rb-font);
+}
+
+.word-ribbon-tab {
+  font-family: var(--rb-font);
+  font-size: var(--rb-tab-size);
+  font-weight: var(--rb-tab-weight);
+  letter-spacing: var(--rb-tracking);
+  line-height: 1;
+  color: hsl(var(--rb-header-text));
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  transition: background 150ms ease, color 150ms ease;
+  position: relative;
+  background: transparent;
+  margin-bottom: -1px;
+  z-index: 1;
+}
+.word-ribbon-tab:hover {
+  background: hsl(0 0% 100% / 0.15);
+  color: hsl(var(--rb-header-text));
+}
+.word-ribbon-tab.active {
+  color: hsl(var(--rb-blue));
+  font-weight: 600;
+  background: hsl(var(--rb-surface-2));
+  border-color: hsl(var(--rb-border));
+  border-bottom: 1px solid hsl(var(--rb-surface-2));
+  z-index: 10;
+}
+.dark .word-ribbon-tab.active {
+  border-bottom: 1px solid hsl(var(--rb-surface-2));
+}
+
+/* Ribbon content surface */
+.word-ribbon-content {
+  background: hsl(var(--rb-surface-2));
+  min-height: 64px;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid hsl(var(--rb-border));
+  box-shadow: none;
+  font-family: var(--rb-font);
+  color: hsl(var(--rb-text));
+}
+.dark .word-ribbon-content {
+  background: hsl(var(--rb-surface-2));
+}
+
+/* Unified typography for all text inside the ribbon */
+.word-ribbon-content,
+.word-ribbon-content button,
+.word-ribbon-content [role="button"],
+.word-ribbon-content input,
+.word-ribbon-content select {
+  font-family: var(--rb-font);
+  letter-spacing: var(--rb-tracking);
+  color: hsl(var(--rb-text));
+}
+
+/* Stacked-button captions and group labels */
+.word-ribbon-content .rb-stack-label {
+  font-size: var(--rb-btn-label);
+  font-weight: 400;
+  letter-spacing: var(--rb-tracking);
+  line-height: 1.1;
+  color: hsl(var(--rb-text));
+}
+.word-ribbon-content .rb-group-label {
+  font-size: var(--rb-group-label);
+  font-weight: 500;
+  letter-spacing: var(--rb-tracking-caps);
+  text-transform: uppercase;
+  line-height: 1;
+  color: hsl(var(--rb-text-muted));
+}
+
+/* Inner ribbon button colors — remap white-based utility classes to dark-on-light.
+   Applies only to the content row now, as the tabs row has a dark background. */
+.word-ribbon-content .text-white,
+.word-ribbon-content .text-white\/90,
+.word-ribbon-content .text-white\/80,
+.word-ribbon-content .text-white\/75,
+.word-ribbon-content .text-white\/70,
+.word-ribbon-content .text-white\/60,
+.word-ribbon-content .text-white\/55,
+.word-ribbon-content .text-white\/50 {
+  color: hsl(var(--rb-text)) !important;
+}
+.word-ribbon-content .hover\:text-white:hover {
+  color: hsl(var(--rb-blue-strong, var(--rb-blue))) !important;
+}
+.word-ribbon-content .bg-white\/\[0\.10\],
+.word-ribbon-content .bg-white\/\[0\.12\],
+.word-ribbon-content .bg-white\/10,
+.word-ribbon-content .bg-white\/15,
+.word-ribbon-content .bg-white\/20,
+.word-ribbon-content .bg-white\/25 {
+  background: hsl(var(--rb-active)) !important;
+}
+.word-ribbon-content .hover\:bg-white\/\[0\.10\]:hover,
+.word-ribbon-content .hover\:bg-white\/\[0\.12\]:hover,
+.word-ribbon-content .hover\:bg-white\/10:hover,
+.word-ribbon-content .hover\:bg-white\/15:hover,
+.word-ribbon-content .hover\:bg-white\/20:hover {
+  background: hsl(var(--rb-hover)) !important;
+}
+
+.word-ribbon-content .text-muted-foreground {
+  color: hsl(var(--rb-text-muted)) !important;
+}
+.word-ribbon-content .hover\:text-foreground:hover {
+  color: hsl(var(--rb-text)) !important;
+}
+.word-ribbon-content .hover\:bg-muted:hover {
+  background: hsl(var(--rb-hover)) !important;
+}
+.word-ribbon-content .border-border\/40,
+.word-ribbon-content .border-border {
+  border-color: hsl(var(--rb-border)) !important;
+}
+.word-ribbon-content .hover\:border-border:hover,
+.word-ribbon-content .hover\:border-border\/40:hover {
+  border-color: hsl(var(--rb-blue) / 0.5) !important;
+}
+.word-ribbon-content .bg-primary\/12,
+.word-ribbon-content .bg-primary\/10,
+.word-ribbon-content .bg-primary\/15 {
+  background: hsl(var(--rb-blue) / 0.12) !important;
+}
+.word-ribbon-content .text-primary {
+  color: hsl(var(--rb-blue)) !important;
+}
+.word-ribbon-content .border-primary\/30 {
+  border-color: hsl(var(--rb-blue) / 0.45) !important;
+}
+
+/* ===== Unified ribbon button system =====
+   One consistent visual language for all toolbar buttons (icon + stacked). */
+.word-ribbon-content .rb-icon-btn,
+.word-ribbon-content .rb-stacked-btn {
+  color: hsl(var(--rb-text));
+  background: transparent;
+  border: 1px solid transparent;
+}
+.word-ribbon-content .rb-icon-btn:hover:not(:disabled),
+.word-ribbon-content .rb-stacked-btn:hover:not(:disabled) {
+  background: hsl(var(--rb-hover));
+  border-color: hsl(var(--rb-blue) / 0.18);
+  color: hsl(var(--rb-blue-strong, var(--rb-blue)));
+}
+.word-ribbon-content .rb-icon-btn.is-active,
+.word-ribbon-content .rb-stacked-btn.is-active {
+  background: hsl(var(--rb-blue) / 0.12);
+  border-color: hsl(var(--rb-blue) / 0.35);
+  color: hsl(var(--rb-blue-strong, var(--rb-blue)));
+  box-shadow: inset 0 0 0 1px hsl(var(--rb-blue) / 0.18);
+}
+.word-ribbon-content .rb-icon-btn:focus-visible,
+.word-ribbon-content .rb-stacked-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--rb-blue) / 0.35);
+}
+
+/* Stacked label */
+.word-ribbon-content .rb-stacked-btn .rb-stack-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: hsl(var(--rb-text));
+  line-height: 1;
+}
+.word-ribbon-content .rb-stacked-btn:hover:not(:disabled) .rb-stack-label,
+.word-ribbon-content .rb-stacked-btn.is-active .rb-stack-label {
+  color: hsl(var(--rb-blue-strong, var(--rb-blue)));
+}
+
+/* Group container — softer separation, subtle bottom caption */
+.word-ribbon-content .rb-group {
+  border-radius: 6px;
+}
+.word-ribbon-content .rb-group:hover {
+  background: hsl(var(--rb-hover) / 0.4);
+}
+.word-ribbon-content .rb-group .rb-group-label {
+  font-size: var(--rb-group-label, 9px);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--rb-text-muted));
+  margin-top: 2px;
+}
+
+/* Dark theme tuning */
+.dark .word-ribbon-content .rb-icon-btn.is-active,
+.dark .word-ribbon-content .rb-stacked-btn.is-active {
+  background: hsl(var(--rb-blue) / 0.22);
+  border-color: hsl(var(--rb-blue) / 0.5);
+  color: hsl(var(--rb-blue));
+}
+.dark .word-ribbon-content .rb-group:hover {
+  background: hsl(var(--rb-hover) / 0.6);
+}
+
+/* Word-like vertical ruler */
+.word-vertical-ruler {
+  background: hsl(210 15% 93%);
+  border-right: 1px solid hsl(210 15% 85%);
+}
+.dark .word-vertical-ruler {
+  background: hsl(215 25% 13%);
+  border-right: 1px solid hsl(215 25% 18%);
+}
+
+/* Word-like status bar */
+.word-status-bar {
+  background: hsl(215 45% 22%);
+  color: white;
+  font-size: 11px;
+}
+.dark .word-status-bar {
+  background: hsl(215 40% 15%);
+}
+
+/* Focus Mode — dims all paragraphs except the one containing the cursor */
+.ProseMirror.focus-mode > * {
+  opacity: 0.25;
+  transition: opacity 0.3s ease;
+}
+.ProseMirror.focus-mode > .has-focus,
+.ProseMirror.focus-mode > *:focus-within,
+.ProseMirror.focus-mode > *:has(.ProseMirror-selectednode) {
+  opacity: 1;
+}
+/* Fallback: highlight the block that contains the caret via JS class */
+.ProseMirror.focus-mode > .focus-active {
+  opacity: 1;
+}
+
+/* Find & Replace highlight */
+.find-highlight {
+  background-color: hsl(48 96% 70% / 0.6);
+  border-radius: 2px;
+}
+.find-highlight-active {
+  background-color: hsl(25 95% 60% / 0.7);
+  border-radius: 2px;
+  color: white;
+}
+
+/* Footnote styling */
+.footnote-ref {
+  font-size: 0.75em;
+  vertical-align: super;
+  color: hsl(var(--primary));
+  cursor: pointer;
+  font-weight: 600;
+}
+.footnotes-section {
+  border-top: 1px solid hsl(var(--border));
+  margin-top: 16px;
+  padding-top: 8px;
+  font-size: 0.85em;
+  color: hsl(var(--muted-foreground));
+}
+.footnotes-section p {
+  margin: 2px 0;
+}
+
+/* TOC styling */
+.toc-block {
+  border: 1px dashed hsl(var(--border));
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  background: hsl(var(--muted) / 0.3);
+}
+.toc-block h3 {
+  font-size: 0.9em;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: hsl(var(--foreground));
+}
+.toc-block ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.toc-block li {
+  padding: 2px 0;
+  font-size: 0.85em;
+}
+
+/* Collaboration cursors */
+.collaboration-cursor__caret {
+  border-left: 2px solid;
+  border-color: currentColor;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+}
+.collaboration-cursor__label {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: 3px 3px 3px 0;
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  white-space: nowrap;
+  color: #fff;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ========= Sprint 2: Listas multinível, Task lists, Campos dinâmicos ========= */
+
+/* Listas multinível com numeração hierárquica (1, 1.1, 1.1.1) */
+.exam-page .tiptap ol,
+.exam-page .ProseMirror ol {
+  counter-reset: item;
+  list-style: none;
+  padding-left: 1.6em;
+}
+.exam-page .tiptap ol > li,
+.exam-page .ProseMirror ol > li {
+  counter-increment: item;
+  position: relative;
+}
+.exam-page .tiptap ol > li::before,
+.exam-page .ProseMirror ol > li::before {
+  content: counters(item, ".") ". ";
+  position: absolute;
+  left: -1.6em;
+  width: 1.4em;
+  text-align: right;
+  color: hsl(var(--foreground));
+  font-variant-numeric: tabular-nums;
+}
+/* Listas com marcador continuam padrão (disc/circle/square por nível) */
+.exam-page .tiptap ul,
+.exam-page .ProseMirror ul {
+  padding-left: 1.4em;
+  list-style: disc outside;
+}
+.exam-page .tiptap ul ul,
+.exam-page .ProseMirror ul ul { list-style: circle outside; }
+.exam-page .tiptap ul ul ul,
+.exam-page .ProseMirror ul ul ul { list-style: square outside; }
+
+/* Task lists (checkbox) */
+.exam-page .tiptap ul[data-type="taskList"],
+.exam-page .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.exam-page .tiptap ul[data-type="taskList"] li,
+.exam-page .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+  margin: 0.2em 0;
+}
+.exam-page .tiptap ul[data-type="taskList"] li::before,
+.exam-page .ProseMirror ul[data-type="taskList"] li::before { content: none; }
+.exam-page .tiptap ul[data-type="taskList"] li > label,
+.exam-page .ProseMirror ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  margin-top: 0.25em;
+  user-select: none;
+}
+.exam-page .tiptap ul[data-type="taskList"] li > label input[type="checkbox"],
+.exam-page .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  width: 1em;
+  height: 1em;
+  accent-color: hsl(var(--primary));
+  cursor: pointer;
+}
+.exam-page .tiptap ul[data-type="taskList"] li > div,
+.exam-page .ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+.exam-page .tiptap ul[data-type="taskList"] li[data-checked="true"] > div,
+.exam-page .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+/* Campo dinâmico — visual de chip discreto */
+.exam-page .tiptap .dynamic-field,
+.exam-page .ProseMirror .dynamic-field {
+  background: hsl(var(--primary) / 0.10);
+  border: 1px dashed hsl(var(--primary) / 0.45);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
