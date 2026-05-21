@@ -5,9 +5,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-COPY bun.lockb ./ 
-# Using npm since it's standard, but if you prefer bun, we can adjust. 
-# Given bun.lockb exists, I'll use npm to be safe with most CI/CD environments.
+# Using npm since it's standard
 RUN npm install
 
 # Copy source code
